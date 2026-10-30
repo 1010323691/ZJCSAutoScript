@@ -3,7 +3,7 @@
 在雷电模拟器上自动做《杖剑传说》的每日任务：杂货、宝库、糖果树、小推车、小屋、日常副本、羁绊冒险、命运果实、竞技场、素材秘境、圣兽试炼、双影幻境、公会挂机、公会捐赠、公会战、公会讨伐，最后统一领奖励。常驻运行，每天服务器刷新后自动再跑一遍；游戏没开或卡死会自己重启游戏并登录。
 
 > **推荐直接下载分发包，解压就能用，不用装 Python。**
-> 👉 [下载最新版](https://github.com/1010323691/ZJCSAutoScript/releases/latest)　·　[直接下载 v1.0.0 压缩包（约 104 MB）](https://github.com/1010323691/ZJCSAutoScript/releases/download/v1.0.0/ZJCSAutoScript-v1.0.0-win64.zip)
+> 👉 [下载最新版](https://github.com/1010323691/ZJCSAutoScript/releases/latest)　·　[直接下载 v1.0.1 压缩包（约 105 MB）](https://github.com/1010323691/ZJCSAutoScript/releases/download/v1.0.1/ZJCSAutoScript-v1.0.1-win64.zip)
 
 ## 安装
 
