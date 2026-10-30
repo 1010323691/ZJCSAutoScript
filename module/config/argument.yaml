@@ -49,7 +49,7 @@ Vault:
 CandyTree:
   _name: 糖果树
   _menu: 日常领取
-  Enable: {type: checkbox, value: false, name: 启用, help: 树上有糖果时点一下收获；没有糖果绝不点树（第二下会进抽奖页）}
+  Enable: {type: checkbox, value: false, name: 启用, help: 树上有糖果时点一下收获；认不出糖果时点一下树身确认，进了幻兽结缘卡池就立即退出，不抽}
 
 Cart:
   _name: 小推车
