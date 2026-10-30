@@ -21,7 +21,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs
 
 from module.config.config import ARGUMENT_FILE, TASK_ORDER, ZjcsConfig
-from module.device.connection import adb_devices, focus_package
+from module.device.adb_replace import replace_ldplayer_adb
+from module.device.connection import adb_devices, adb_path, focus_package
 from module.logger import LOG_DIR, ROOT, log_file
 from module.notify import send_toast
 from module.runtime import (clear_commands, now_iso, pending_commands, read_history, read_json, read_runtime,
@@ -228,7 +229,7 @@ def force_stop():
 
 # ---------- 设备 ----------
 def adb_run(config, args, timeout=10):
-    return subprocess.run([config.Device_AdbExecutable] + args, capture_output=True, timeout=timeout,
+    return subprocess.run([adb_path(config.Device_AdbExecutable)] + args, capture_output=True, timeout=timeout,
                           creationflags=subprocess.CREATE_NO_WINDOW)
 
 
@@ -264,7 +265,7 @@ def check_device():
         return ok
 
     try:
-        devices = adb_devices(config.Device_AdbExecutable)
+        devices = adb_devices(adb_path(config.Device_AdbExecutable))
     except (OSError, subprocess.TimeoutExpired) as e:
         step('adb 能用', False, f'运行不了 {config.Device_AdbExecutable}：{e}')
         return {'ok': False, 'steps': steps}
@@ -461,6 +462,12 @@ def main():
     parser.add_argument('--no-browser', action='store_true', help='不自动打开浏览器')
     args = parser.parse_args()
     CONFIG_NAME, PORT = args.config, args.port
+    config = current_config()
+    if config.Device_ReplaceAdb:
+        try:
+            replace_ldplayer_adb(CONFIG_NAME, [adb_path(config.Device_AdbExecutable)])
+        except Exception as e:
+            print(f'替换雷电的 adb 失败，先用原来的：{e}')
     server = ThreadingHTTPServer(('127.0.0.1', PORT), Handler)
     url = f'http://127.0.0.1:{PORT}'
     print(f'配置界面: {url}（Ctrl+C 退出）')

@@ -21,7 +21,7 @@ REPO = '1010323691/ZJCSAutoScript'
 BRANCH = 'main'
 VERSION_FILE = os.path.join(ROOT, 'version.json')
 # 由更新替换的代码文件；新版本里没有的会被删掉
-MANAGED = ['module', 'assets', 'docs', 'gui.py', 'zjcs.py', 'updater.py', 'requirements.txt', 'README.md', 'LICENSE']
+MANAGED = ['module', 'assets', 'bin', 'docs', 'gui.py', 'zjcs.py', 'updater.py', 'requirements.txt', 'README.md', 'LICENSE']
 WORK = os.path.join(ROOT, '.update')
 
 
@@ -94,7 +94,8 @@ def update():
     say('正在检查更新…')
     current = local_commit()
     latest = fetch(f'https://api.github.com/repos/{REPO}/commits/{BRANCH}', 8, 'application/vnd.github.sha').decode().strip()
-    if latest == current:
+    # 版本一样但缺文件（旧版更新程序不认识新加进 MANAGED 的目录，比如 bin）也要重新拉一次
+    if latest == current and all(os.path.exists(os.path.join(ROOT, name)) for name in MANAGED):
         return
     if scheduler_running():
         say('脚本正在后台跑，这次先不更新')

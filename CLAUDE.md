@@ -79,7 +79,7 @@ zjcs.exe（Tauri 2 桌面壳，webapp/src-tauri）
 
 ## 安全约定（不能违反）
 
-- **设备**：本机实例 0（`emulator-5554`）跑着别的游戏和 ALAS，不要碰；本机游戏在 `emulator-5556`（真实配置里写的）。分发版的默认序列号是 5554，所以测试时不要删掉或替换 `config/zjcs.yaml`。只用雷电自带的 adb，不执行 `adb kill-server` / `start-server`，也不改模拟器窗口尺寸和分辨率。
+- **设备**：本机实例 0（`emulator-5554`）跑着别的游戏和 ALAS，不要碰；本机游戏在 `emulator-5556`（真实配置里写的）。分发版的默认序列号是 5554，所以测试时不要删掉或替换 `config/zjcs.yaml`。adb 默认用自带的 `bin/adb/adb.exe`（从 ALAS 的 adbutils 复制的 29.0.6，和 ALAS 同一份）。`gui.py` 启动时按 `Device_ReplaceAdb` 调 `module/device/adb_replace.py` 替换雷电目录里的 adb：不一致时先结束所有 adb 进程，原文件改名 `.bak`，调度进程在跑时跳过。这会让同机其他用 adb 的程序（本机 ALAS）断开一下，是用户确认过的做法（照搬 ALAS 的 ReplaceAdb）。除此之外不要执行 `adb kill-server` / `start-server`，也不改模拟器窗口尺寸和分辨率。
 - **游戏操作**：绝不抽卡、扭蛋。不点主菜单轮播横幅（会轮到刮刮乐）、付费按钮、羁绊冒险「挑战」、糖果树卡池的「结缘」按钮、「删除已读」、床的「全局加速」、组队邀请。花钻石或晨星的地方都先核对数量或价格，对不上就取消。
 - **不要擅自假设**：游戏机制、界面操作、执行逻辑或配置规则不明确时，先问用户，不要自己决定；只实现用户明确提出的内容。完整禁点清单和每项授权的上限，在私有知识库 01 篇第 3 节。
 - **知识库**：`kb/` 是单独的私有仓库 `1010323691/ZJCSAutoScript-KB`，本仓库 `.gitignore` 排除了它（截图里有账号信息）。改了知识库要进 `kb/` 单独提交、推送。本仓库是公开的，不要把 kb 内容、`dev_tools/screens/`、`config/zjcs.yaml`、日志加进来。

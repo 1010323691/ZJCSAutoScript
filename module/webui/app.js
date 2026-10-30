@@ -761,7 +761,9 @@
       h('div', { class: 'cols' },
         h('label', { class: 'lf' }, '设备序列号', textInput('Device', 'Serial'), errorLine('Device_Serial'), h('span', { class: 'hint' }, '雷电第 1 个实例是 emulator-5554，第 2 个是 emulator-5556，依次加 2')),
         h('label', { class: 'lf' }, '游戏包名', textInput('Device', 'PackageName'), errorLine('Device_PackageName'))),
-      h('label', { class: 'lf' }, 'adb 路径', textInput('Device', 'AdbExecutable', { mono: true }), errorLine('Device_AdbExecutable'), h('span', { class: 'hint' }, '雷电安装目录里的 adb.exe，填好后点下面的「检查连接」确认')),
+      h('label', { class: 'lf' }, 'adb 路径', textInput('Device', 'AdbExecutable', { mono: true }), errorLine('Device_AdbExecutable'), h('span', { class: 'hint' }, '默认是脚本自带的 bin\\adb\\adb.exe，一般不用改')),
+      switchRow(() => get('Device', 'ReplaceAdb'), () => set('Device', 'ReplaceAdb', !get('Device', 'ReplaceAdb')), '替换雷电的 adb',
+        '打开时把雷电目录里的 adb.exe 换成自带的那份（原文件改名 adb.exe.bak），会先结束所有 adb 进程。版本一致，雷电、别的脚本和这里就不会互相断线。'),
       h('div', { class: 'cols' },
         h('div', { class: 'field' }, h('h3', { class: 'lf' }, '截图方式'),
           h('div', { class: 'seg', role: 'group', 'aria-label': '截图方式' }, ['adb_raw', 'adb_png'].map((m) =>

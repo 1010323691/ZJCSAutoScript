@@ -1,7 +1,13 @@
+import os
 import subprocess
 
 from module.exception import RequestHumanTakeover
-from module.logger import logger
+from module.logger import ROOT, logger
+
+
+def adb_path(path):
+    """配置里的 adb 路径；相对路径按项目根目录算（默认值 bin/adb/adb.exe 是脚本自带的）"""
+    return path if os.path.isabs(path) else os.path.join(ROOT, path)
 
 
 def adb_devices(adb):
@@ -29,11 +35,11 @@ class Connection:
         """
         通过 adb 可执行文件发命令。
 
-        只用雷电自带的 adb（和本机其他脚本同一个版本），不执行 kill-server / start-server，
-        避免 adb server 版本不一致时互相踢掉，影响同机运行的其他模拟器实例。
+        默认用脚本自带的 adb（bin/adb，和 ALAS 同一份）。打开配置界面时会把雷电目录里的 adb 也换成这份
+        （module/device/adb_replace.py），版本一致就不会互相踢掉 adb 服务。这里不执行 kill-server / start-server。
         """
         self.config = config
-        self.adb = config.Device_AdbExecutable
+        self.adb = adb_path(config.Device_AdbExecutable)
         self.serial = str(config.Device_Serial)
         self.package = config.Device_PackageName
         self.check_device()

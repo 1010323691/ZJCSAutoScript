@@ -20,7 +20,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIST = os.path.join(ROOT, 'dist')
 
 # 项目里要放进包的文件和目录
-PROJECT = ['zjcs.exe', 'zjcs.py', 'gui.py', 'updater.py', 'requirements.txt', 'README.md', 'LICENSE', 'module', 'assets', 'docs']
+PROJECT = ['zjcs.exe', 'zjcs.py', 'gui.py', 'updater.py', 'bin', 'requirements.txt', 'README.md', 'LICENSE', 'module', 'assets', 'docs']
 # 标准库里用不到的部分
 STDLIB_SKIP = {'site-packages', 'test', 'idlelib', 'tkinter', 'turtledemo', 'ensurepip', 'lib2to3', 'venv', '__pycache__'}
 DLLS_SKIP = ('_tkinter', 'tcl', 'tk')
