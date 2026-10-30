@@ -5,7 +5,13 @@
 
 ## 运行
 
-环境：Windows，雷电模拟器实例 1（`emulator-5556`，720×1280 竖屏）。游戏没开或卡死时脚本会自己重启游戏并自动登录。
+环境：Windows 10/11 64 位，雷电模拟器（分辨率 720×1280 竖屏）；默认连第 1 个实例 `emulator-5554`，adb 用雷电安装目录里的 `adb.exe`，都在配置界面「设置 → 设备」里改。游戏没开或卡死时脚本会自己重启游戏并自动登录。
+
+**直接用**：到 [Releases](https://github.com/1010323691/ZJCSAutoScript/releases) 下载 `ZJCSAutoScript-v<版本>-win64.zip`，解压到任意目录（路径里有中文、空格都行），双击 `zjcs.exe`。包里自带 Python 和所有依赖（`toolkit\`），不用另外装环境。第一次打开先到「设置 → 设备」填雷电的 `adb.exe` 路径和序列号，点「检查连接」确认能截到图。
+
+**自动更新**：每次打开 `zjcs.exe` 会先从 GitHub 取 main 分支最新代码（`updater.py`），只换代码文件，`config` 里的配置不动。GitHub 连不上就用当前版本照常打开；脚本正在后台跑时这次不更新；新版本换了依赖时会提示到 Releases 重新下载分发包。从源码目录（有 `.git`）运行时不自动更新。
+
+**从源码运行**（开发用）：
 
 ```bash
 python -m venv .venv
@@ -29,12 +35,18 @@ python -m venv .venv
 .venv\Scripts\python.exe gui.py
 ```
 
-也可以双击项目根目录的 `zjcs.exe`：在独立窗口里打开同一个配置界面，不用浏览器。它会自己在后台启动 `gui.py`，按 `.venv\Scripts\python.exe` → `toolkit\python.exe` → 系统 PATH 里的 Python 的顺序找解释器，所以上面的 Python 环境仍然要先装好；关掉窗口时配置服务一起退出。窗口靠系统自带的 Microsoft Edge WebView2 运行时显示（Windows 10/11 一般都有，缺了会弹窗提示去哪下载）。再双击不会开第二个，只会把已有窗口拿到前面。
+也可以双击项目根目录的 `zjcs.exe`：在独立窗口里打开同一个配置界面，不用浏览器。它会自己在后台启动 `gui.py`，按 `.venv\Scripts\python.exe` → `toolkit\python.exe` → 系统 PATH 里的 Python 的顺序找解释器，从源码运行时上面的 Python 环境要先装好（分发包自带 `toolkit`，不用装）；关掉窗口时配置服务一起退出。窗口靠系统自带的 Microsoft Edge WebView2 运行时显示（Windows 10/11 一般都有，缺了会弹窗提示去哪下载）。再双击不会开第二个，只会把已有窗口拿到前面。
 
 改了 `webapp/` 下的代码或图标后重新编译（需要 Rust stable，第一次要下载依赖，几分钟）：
 
 ```bash
 powershell -ExecutionPolicy Bypass -File webapp\build.ps1
+```
+
+打分发包（先编译好 `zjcs.exe`）：把本机建 `.venv` 的 Python 和 `.venv` 里的依赖复制进 `toolkit\`，生成 `dist\ZJCSAutoScript-v<版本>-win64.zip`：
+
+```bash
+.venv\Scripts\python.exe dev_tools\package.py 1.0.0
 ```
 
 跑一遍到期的日常：
@@ -62,6 +74,7 @@ powershell -ExecutionPolicy Bypass -File webapp\build.ps1
 ```
 zjcs.py                 入口：ZjcsAutoScript，调度循环 + 每个任务一个同名方法；出错时保存截图、重启游戏
 gui.py                  配置界面的本机服务（只监听 127.0.0.1，标准库 http.server）：读写配置并按 argument.yaml 校验；启停脚本、立即执行、日志、截图、设备检测、测试通知
+updater.py              启动时自动更新：zjcs.exe 打开时先跑它，从 GitHub 拉 main 最新代码替换代码文件
 zjcs.exe                桌面壳（webapp/build.ps1 编译出来的）：后台启动 gui.py，在独立窗口里打开配置界面
 webapp/                 桌面壳源码（Tauri 2）：src-tauri/ 启动配置服务和窗口，shell/ 启动页，icons/ 图标
 config/                 zjcs.yaml（用户配置）、zjcs.state.json（调度状态）
@@ -86,6 +99,7 @@ assets/<模块>/          模板图片 + define.yaml（按钮区域定义）
 dev_tools/
 ├─ screenshot.py        截一张全分辨率截图到 dev_tools/screens/
 ├─ button_extract.py    按 define.yaml 裁模板、生成 module/<模块>/assets.py
+├─ package.py           打分发包（自带 Python 的 zip）
 └─ screens/             素材原图
 log/                    运行日志；出错时最近 10 张截图存到 log/error/<时间>/
 ```

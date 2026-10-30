@@ -21,3 +21,8 @@ zjcs.exe
 
 # 本机工具配置
 .claude/
+
+# 分发包（dev_tools/package.py 生成）
+dist/
+version.json
+.update/

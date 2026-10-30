@@ -13,8 +13,8 @@
 Device:
   _name: 设备
   _menu: 设置
-  Serial: {type: input, value: emulator-5556, name: 设备序列号, help: 雷电实例 1 是 emulator-5556}
-  AdbExecutable: {type: input, value: 'D:\app\ldplayer14\adb.exe', name: adb 路径, help: 用雷电自带的 adb，和本机其他脚本同版本}
+  Serial: {type: input, value: emulator-5554, name: 设备序列号, help: 雷电第 1 个实例是 emulator-5554，第 2 个是 emulator-5556，依次加 2}
+  AdbExecutable: {type: input, value: 'D:\app\ldplayer14\adb.exe', name: adb 路径, help: 雷电安装目录里的 adb.exe}
   PackageName: {type: input, value: com.leiting.zjcs, name: 游戏包名}
   ScreenshotMethod: {type: select, value: adb_raw, option: [adb_raw, adb_png], name: 截图方式}
   ScreenshotInterval: {type: float, value: 0.3, name: 截图最短间隔（秒）}

@@ -1,11 +1,11 @@
-//! 配置服务（gui.py）：已经在跑就直接连，没在跑就用项目里的 Python 在后台启动它。
+//! 配置服务（gui.py）：已经在跑就直接连，没在跑就先跑 updater.py 拉最新代码，再用项目里的 Python 在后台启动它。
 
 use std::env;
-use std::io::{Read, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{SocketAddr, TcpStream};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
-use std::sync::{Arc, Mutex};
+use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -27,6 +27,8 @@ use windows::Win32::System::Threading::{OpenProcess, PROCESS_SET_QUOTA, PROCESS_
 /// 和 gui.py 的默认端口一致
 pub const PORT: u16 = 22367;
 const STARTUP_TIMEOUT: Duration = Duration::from_secs(40);
+/// 自动更新最多等这么久（GitHub 连不上或很慢时不能一直卡在启动页）
+const UPDATE_TIMEOUT: Duration = Duration::from_secs(60);
 
 pub fn url(path: &str) -> String {
     format!("http://127.0.0.1:{PORT}{path}")
@@ -130,6 +132,8 @@ pub fn start_and_wait(root: &Path, stage: impl Fn(&str)) -> Result<Backend, Star
         )
     })?;
 
+    run_updater(root, &python, &stage);
+
     stage("正在启动配置服务…");
     let mut command = Command::new(&python);
     command
@@ -201,6 +205,61 @@ pub fn start_and_wait(root: &Path, stage: impl Fn(&str)) -> Result<Backend, Star
         "配置服务启动超时",
         format!("等了 {} 秒，{} 还没有响应。\n\n{}", STARTUP_TIMEOUT.as_secs(), url("/"), text),
     ))
+}
+
+/// 启动配置服务前先跑 updater.py 拉最新代码，它每行输出一条进度，显示在启动页上。
+/// 更新失败或超时都不拦着启动，用当前版本接着开。
+fn run_updater(root: &Path, python: &Path, stage: &impl Fn(&str)) {
+    if !root.join("updater.py").is_file() {
+        return;
+    }
+    let mut command = Command::new(python);
+    command
+        .current_dir(root)
+        .arg("updater.py")
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .env("PYTHONUTF8", "1")
+        .env("PYTHONIOENCODING", "utf-8:replace")
+        .env("PYTHONUNBUFFERED", "1");
+    #[cfg(windows)]
+    command.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    let Ok(mut child) = command.spawn() else { return };
+    let (sender, receiver) = mpsc::channel::<String>();
+    if let Some(stdout) = child.stdout.take() {
+        thread::spawn(move || {
+            for line in BufReader::new(stdout).lines().map_while(Result::ok) {
+                if sender.send(line).is_err() {
+                    break;
+                }
+            }
+        });
+    }
+    let started = Instant::now();
+    let mut last = String::new();
+    loop {
+        match receiver.recv_timeout(Duration::from_millis(200)) {
+            Ok(line) if !line.trim().is_empty() => {
+                stage(line.trim());
+                last = line.trim().to_string();
+            }
+            Ok(_) => {}
+            Err(mpsc::RecvTimeoutError::Disconnected) => break,
+            Err(mpsc::RecvTimeoutError::Timeout) if started.elapsed() > UPDATE_TIMEOUT => {
+                let _ = child.kill();
+                stage("检查更新超时，先用当前版本");
+                last = "超时".into();
+                break;
+            }
+            Err(mpsc::RecvTimeoutError::Timeout) => {}
+        }
+    }
+    let _ = child.wait();
+    // 「已更新」「下载新分发包」这类结果多停一会儿，让人看得到
+    if !last.is_empty() && !last.ends_with('…') {
+        thread::sleep(Duration::from_millis(1800));
+    }
 }
 
 fn explain_exit(python: &Path, status: &str, output: &str) -> StartError {
