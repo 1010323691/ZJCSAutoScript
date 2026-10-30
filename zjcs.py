@@ -227,7 +227,7 @@ class ZjcsAutoScript:
                   if any(r == key for _, r in results)]
         failed = [self.task_name(t) for t, r in results if r == 'failed']
         body = '，'.join(counts) + (f'。失败的：{"、".join(failed)}' if failed else '')
-        notify(self.config, 'Finish', '一条龙跑完了', body)
+        notify(self.config, 'Finish', 'ZJCSAutoScript 跑完了', body)
 
     def wait_until(self, next_run):
         """
@@ -322,7 +322,7 @@ def main():
     def stop_with_problem(reason, message):
         runtime.stop(reason, message)
         try:
-            notify(script.config, 'Human', '一条龙停下了，需要你看一下', message)
+            notify(script.config, 'Human', 'ZJCSAutoScript 停下了，需要你看一下', message)
         except Exception as e:
             logger.warning(f'发通知时出错: {e}')
 

@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-《杖剑传说》日常自动化（「一条龙」），架构参考 AzurLaneAutoScript（ALAS），对照分析见 `docs/01_参考项目分析.md`。每个日常任务的规则、脚本步骤、验证情况和待验证项见 `docs/02_日常一条龙流程设计.md`，改任务逻辑前先读对应小节。`README.md` 只写给最终用户（安装、设置、更新、常见问题），开发内容写在这里。
+《杖剑传说》日常自动化 ZJCSAutoScript，架构参考 AzurLaneAutoScript（ALAS），对照分析见 `docs/01_参考项目分析.md`。每个日常任务的规则、脚本步骤、验证情况和待验证项见 `docs/02_日常流程设计.md`，改任务逻辑前先读对应小节。`README.md` 只写给最终用户（安装、设置、更新、常见问题），开发内容写在这里。
 
 ## 开发流程（必须遵守）
 

@@ -1,6 +1,6 @@
 'use strict';
 /*
- * 一条龙配置界面。不依赖任何库：
+ * ZJCSAutoScript 配置界面。不依赖任何库：
  * - h() 建 DOM，属性或子节点传函数就是「动态的」，每次 refresh() 重新求值；
  * - 状态都在 S 里，改完调用 refresh()；保存时 POST /api/config，由 gui.py 校验后写回 config/zjcs.yaml。
  */
@@ -1267,7 +1267,7 @@
     return h('nav', { class: 'side', 'aria-label': '页面' },
       h('div', { class: 'brand' },
         h('span', { class: 'brand-mark', 'aria-hidden': 'true' }, icon('route', 22)),
-        h('div', null, h('div', { class: 'brand-name' }, '一条龙'), h('div', { class: 'brand-sub' }, '杖剑传说 · 每日自动化'))),
+        h('div', null, h('div', { class: 'brand-name' }, 'ZJCSAutoScript'), h('div', { class: 'brand-sub' }, '杖剑传说 · 每日自动化'))),
       h('div', { class: 'side-nav' },
         PAGES.slice(0, 4).map(item),
         h('div', { class: 'side-label' }, '系统'),

@@ -1,4 +1,4 @@
-//! 一条龙桌面壳：双击 zjcs.exe → 后台启动配置服务（gui.py）→ 在独立窗口里打开配置界面。
+//! ZJCSAutoScript 桌面壳：双击 zjcs.exe → 后台启动配置服务（gui.py）→ 在独立窗口里打开配置界面。
 //! 结构参考 NIKKEAutoScript 的 webapp/src-tauri，只保留启动、窗口和单实例。
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
@@ -93,7 +93,7 @@ fn locate_root() -> Result<PathBuf> {
             return Ok(dir.to_path_buf());
         }
     }
-    anyhow::bail!("找不到一条龙的项目目录（里面要有 gui.py 和 zjcs.py）。把 zjcs.exe 放在项目根目录里再打开。")
+    anyhow::bail!("找不到 ZJCSAutoScript 的项目目录（里面要有 gui.py 和 zjcs.py）。把 zjcs.exe 放在项目根目录里再打开。")
 }
 
 /// 只允许留在本机配置服务和内置启动页，其他链接交给系统浏览器
@@ -107,7 +107,7 @@ fn is_startup_page(url: &Url) -> bool {
 
 fn create_window(app: &AppHandle, reporter: Reporter) -> Result<WebviewWindow> {
     WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
-        .title("一条龙")
+        .title("ZJCSAutoScript")
         .inner_size(1440.0, 900.0)
         .min_inner_size(1120.0, 680.0)
         .center()
@@ -191,7 +191,7 @@ fn run() -> Result<()> {
 fn main() {
     if let Err(error) = run() {
         show_native_message(
-            "一条龙启动失败",
+            "ZJCSAutoScript 启动失败",
             &format!(
                 "{error:#}\n\n如果提示和 WebView2 有关：这台电脑缺少 Microsoft Edge WebView2 运行时（Windows 10/11 一般自带），到 https://developer.microsoft.com/microsoft-edge/webview2/ 下载「常青版运行时」装上即可。"
             ),

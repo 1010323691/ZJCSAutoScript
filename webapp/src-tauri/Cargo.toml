@@ -1,7 +1,7 @@
 [package]
 name = "zjcs"
 version = "1.0.1"
-description = "一条龙桌面壳：双击后台启动 gui.py，在独立窗口里打开配置界面"
+description = "ZJCSAutoScript 桌面壳：双击后台启动 gui.py，在独立窗口里打开配置界面"
 edition = "2021"
 
 [build-dependencies]

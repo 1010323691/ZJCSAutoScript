@@ -8,7 +8,7 @@ from module.exception import RequestHumanTakeover
 from module.logger import ROOT, logger
 from module.runtime import write_json, write_text
 
-# 日常一条龙的执行顺序，和需求清单顺序一致
+# 日常任务的执行顺序，和需求清单顺序一致
 TASK_ORDER = [
     'UiTest',
     'GeneralShop',

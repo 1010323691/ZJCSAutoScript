@@ -449,7 +449,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == '/api/device/check':
             return self.send_json(200, check_device())
         if self.path == '/api/notify/test':
-            error = send_toast('一条龙 · 测试通知', '看到这条，说明出问题时你能收到提醒。')
+            error = send_toast('ZJCSAutoScript · 测试通知', '看到这条，说明出问题时你能收到提醒。')
             return self.send_json(200, {'ok': not error, 'error': error})
         return self.send_json(404, {'error': 'not found'})
 
