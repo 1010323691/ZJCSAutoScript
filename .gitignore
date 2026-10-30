@@ -1,0 +1,23 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# 个人配置和运行时文件（没有 zjcs.yaml 时按 argument.yaml 的默认值运行）
+config/*
+!config/.gitkeep
+
+# 日志、出错截图
+log/
+
+# 游戏知识库和素材原图只留在本地（截图里有账号信息）
+kb/
+dev_tools/screens/*
+!dev_tools/screens/.gitkeep
+
+# 桌面壳编译产物（用 webapp/build.ps1 自己编译）
+webapp/src-tauri/target/
+zjcs.exe
+
+# 本机工具配置
+.claude/

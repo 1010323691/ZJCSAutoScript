@@ -1,0 +1,42 @@
+# 笔记 → 每日活动
+NOTE_DAILY_ACTIVITY:    # 笔记页「每日活动」卡片
+  click: [490, 560, 650, 720]
+PAGE_DAILY_ACTIVITY:    # 标题「每日活动」
+  screen: daily_activity
+  area: [40, 37, 167, 65]
+ACTIVITY_HOLY_BEAST:    # 圣兽试炼卡片
+  click: [300, 200, 680, 320]
+ACTIVITY_TWIN_SHADOW:   # 双影幻境卡片
+  click: [300, 480, 680, 600]
+
+# 圣兽试炼
+PAGE_HOLY_BEAST:        # 标题「圣兽试炼」
+  screen: holy_beast
+  area: [75, 37, 203, 65]
+
+# 双影幻境
+PAGE_TWIN_SHADOW:       # 标题「双影幻境」
+  screen: twin_shadow
+  area: [74, 36, 203, 65]
+ENDLESS_OFF:            # 「无尽模式」左边的单选圆圈，未选中（灰色）
+  screen: twin_shadow
+  area: [278, 1024, 302, 1046]
+
+# 进度奖励（圣兽试炼、双影幻境通用）：进度条上三个宝箱，可领取时右上角有红色「!」，点任意一个就全部领取
+REWARD_BADGE:           # 第 1 个宝箱的红色「!」；按钮是宝箱本身。双影幻境的进度条比圣兽试炼高 10 像素，在区域里找
+  screen: holy_reward
+  area: [282, 890, 296, 911]
+  button: [243, 900, 283, 940]
+
+# 匹配（圣兽试炼、双影幻境通用）
+MATCH_START:            # 右下「匹配」
+  screen: holy_beast
+  area: [510, 1085, 560, 1106]
+  button: [390, 1072, 680, 1118]
+MATCH_CANCEL:           # 匹配中按钮变成「取消匹配」
+  screen: holy_match1
+  area: [481, 1083, 588, 1106]
+MATCH_ACCEPT:           # 匹配成功后 6 人确认界面的「接受」（约 15 秒倒计时）
+  screen: holy_wait_0
+  area: [495, 1091, 544, 1113]
+  button: [390, 1078, 660, 1126]

@@ -1,0 +1,135 @@
+# 领奖励（日常清完后统一领取）
+CLAIM_BUTTON:           # 列表里黄色的「领取」按钮（含圆角边框，避开右上角红点）；任务、馈赠、秘宝大作战等列表通用，在区域里找
+  screen: rd_task_top
+  area: [503, 199, 632, 244]
+  button: [500, 196, 653, 246]
+SUBMIT_BUTTON:          # 委托卡片底部黄色「提交」文字；按钮是整条黄色横条
+  screen: rd_task_wt
+  area: [517, 503, 571, 533]
+  button: [400, 495, 690, 540]
+SIGNIN_CLAIM:           # 每日签到当天格子上的绿色「领取」小标签；点格子
+  screen: rd_signin
+  area: [473, 420, 540, 443]
+  button: [440, 410, 540, 530]
+
+# 页面识别（标题文字）
+MENU_CHECK:             # 主菜单「任务」卡片的文字
+  screen: rd_menu
+  area: [263, 701, 333, 741]
+TASK_CHECK:             # 「日常任务」标题
+  screen: rd_task_top
+  area: [40, 36, 171, 69]
+COMMISSION_CHECK:       # 「委托任务」标题
+  screen: rd_task_wt
+  area: [80, 33, 220, 69]
+GIFT_CHECK:             # 「馈赠总览」标题
+  screen: rd_gift
+  area: [40, 36, 180, 69]
+MALL_CHECK:             # 商城「超值精选」标题
+  screen: rd_mall
+  area: [40, 36, 180, 69]
+MALL_DAILY_CHECK:       # 「每日特惠」大标题
+  screen: rd_mall_daily
+  area: [200, 307, 527, 387]
+MALL_CARD_CHECK:        # 「月卡」标题
+  screen: rd_mall_card
+  area: [73, 36, 144, 67]
+EVENT_CHECK:            # 精彩活动「活动汇总」标题
+  screen: rd_event
+  area: [40, 36, 175, 69]
+SEASON_CHECK:           # 赛季活动「闪耀羁绊」logo
+  screen: rd_season
+  area: [100, 440, 380, 560]
+JM_CHECK:               # 「晶芒淬炼」标题
+  screen: rd_season_jm
+  area: [60, 24, 193, 56]
+MIBAO_CHECK:            # 「秘宝大作战」标题
+  screen: rd_mibao
+  area: [60, 333, 347, 387]
+SIGNIN_CHECK:           # 「每日签到」标题
+  screen: rd_signin
+  area: [67, 127, 280, 187]
+FRIEND_CHECK:           # 「好友」标题
+  screen: rd_friend
+  area: [37, 36, 107, 69]
+
+# 活动汇总里的卡片文字（列表会变，在区域里找）
+EVENT_SEASON:
+  screen: rd_event
+  area: [473, 207, 660, 253]
+EVENT_MIBAO:
+  screen: rd_event
+  area: [427, 940, 664, 987]
+EVENT_SIGNIN:
+  screen: rd_event_bottom
+  area: [473, 735, 660, 785]
+
+# 只点击
+MENU_ENTRY:             # 家园右下方块图标 = 主菜单
+  click: [650, 995, 700, 1045]
+EVENT_ENTRY:            # 家园右上「精彩活动」
+  click: [625, 130, 685, 185]
+MENU_TASK:              # 主菜单「任务」卡片（不要点上面的轮播横幅，会轮到幸运刮刮乐）
+  click: [80, 650, 330, 740]
+MENU_MALL:              # 主菜单「商城」卡片
+  click: [400, 650, 650, 740]
+MENU_FRIEND:
+  click: [60, 790, 140, 870]
+MENU_GIFT:              # 主菜单「馈赠」
+  click: [445, 925, 530, 1005]
+TASK_TAB_DAILY:
+  click: [165, 1195, 265, 1240]
+TASK_TAB_COMMISSION:
+  click: [385, 1195, 470, 1240]
+MALL_DAILY_CARD:        # 商城「每日特惠」卡片
+  click: [300, 640, 680, 820]
+MALL_DAILY_GIFT:        # 每日特惠左上「每日赠礼」
+  click: [55, 335, 145, 435]
+MALL_TAB_CARD:          # 商城底部「月卡」页签
+  click: [385, 1190, 470, 1245]
+JM_TAB_1:
+  click: [60, 455, 240, 500]
+JM_TAB_2:
+  click: [270, 455, 450, 500]
+JM_TAB_3:
+  click: [480, 455, 680, 500]
+SEASON_JM:              # 赛季活动「晶芒淬炼」
+  click: [60, 1005, 220, 1065]
+FRIEND_HEART:           # 好友页底部中间黄色爱心按钮
+  click: [325, 1075, 395, 1140]
+FRIEND_DIALOG:          # 点爱心后弹出的「友情币获得」标题
+  screen: rd_friend_heart
+  area: [273, 240, 447, 276]
+FRIEND_DIALOG_CLAIM:    # 「友情币获得」底部「领取」（领完没有奖励弹窗，弹窗不关）
+  click: [260, 945, 460, 990]
+FRIEND_DIALOG_CLOSE:    # 弹窗外空白处
+  click: [300, 1120, 420, 1170]
+PASS_CHECK:             # 「巡礼之证」页左上标题（两个页签都有）
+  screen: rd_pass
+  area: [60, 100, 293, 147]
+MALL_PASS_CARD:         # 商城「巡礼之证」卡片
+  click: [300, 140, 690, 320]
+PASS_TAB_MAIN:          # 底部「巡礼之证」页签（等级奖励）
+  click: [200, 1195, 390, 1240]
+PASS_TAB_GOAL:          # 底部「巡礼目标」页签（任务经验）
+  click: [470, 1195, 660, 1240]
+PASS_GOAL_DAILY:
+  click: [70, 1095, 230, 1135]
+PASS_GOAL_WEEKLY:
+  click: [290, 1095, 440, 1135]
+PASS_GOAL_SEASON:
+  click: [500, 1095, 650, 1135]
+FATE_ROW:               # 秘宝大作战「命运探索1次」任务文字
+  screen: fate_mibao_top
+  area: [211, 784, 350, 811]
+GOTO_TEXT:              # 任务行右边的「前往」（没完成时）
+  screen: fate_mibao_top
+  area: [560, 797, 624, 827]
+MAP_EXPLORE:            # 大地图右下「探索」（旁边的「探索10次」不点）
+  screen: fate_map
+  area: [504, 1173, 587, 1264]
+FATE_CONFIRM:           # 确认框「是否消耗1枚命运果实，在」（后面的地名坐标会变，不截）
+  screen: fate_explore
+  area: [120, 480, 360, 507]
+FATE_CONFIRM_OK:        # 确认框「确定」
+  click: [400, 765, 580, 810]

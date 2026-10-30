@@ -1,0 +1,204 @@
+# 笔记页卡片
+NOTE_MATERIAL:          # 素材秘境
+  click: [130, 960, 290, 1090]
+NOTE_COMPETE:           # 竞技
+  click: [130, 740, 290, 870]
+
+# 竞技
+PAGE_COMPETE:           # 标题「竞技」
+  screen: compete
+  area: [40, 37, 102, 65]
+COMPETE_ARENA:          # 竞技场卡片
+  click: [300, 200, 680, 320]
+
+# 竞技场
+PAGE_ARENA:             # 标题「竞技场」
+  screen: arena
+  area: [76, 36, 170, 64]
+ARENA_TICKET_PLUS:      # 右上挑战券旁边的「+」
+  click: [572, 38, 602, 68]
+ARENA_BUY_DIALOG:       # 「购买竞技场券」弹窗标题
+  screen: arena_buy
+  area: [258, 336, 461, 366]
+ARENA_BUY_PLUS:
+  click: [517, 681, 553, 717]
+ARENA_BUY_CONFIRM:      # 弹窗「购买」
+  click: [400, 810, 590, 856]
+ARENA_BUY_CANCEL:       # 弹窗「取消」
+  click: [130, 810, 330, 856]
+ARENA_QTY_1:            # 购买数量显示「1」
+  screen: arena_buy
+  area: [348, 683, 371, 714]
+ARENA_QTY_3:
+  screen: arena_buy3
+  area: [348, 683, 371, 714]
+ARENA_LAST_CHALLENGE:   # 选择对手里第 4 个（最后一个）对手下面的红色交叉剑
+  click: [598, 868, 648, 918]
+ARENA_CHALLENGE_DIALOG: # 「排位挑战」确认框标题
+  screen: arena_fight1
+  area: [293, 256, 426, 287]
+ARENA_CHALLENGE_CONFIRM: # 确认框里「挑战（消耗 1 张券）」，扫荡战斗，直接出结算页
+  click: [250, 878, 470, 924]
+
+# 日常副本
+NOTE_DUNGEON:           # 笔记页「日常副本」卡片
+  click: [80, 220, 340, 420]
+PAGE_DUNGEON:           # 副本列表页标题旁的「每日领奖次数」
+  screen: dungeon
+  area: [190, 40, 300, 60]
+DUNGEON_CARD_1:         # 列表第 1 个副本（磐岩斗阵）
+  click: [60, 160, 660, 420]
+DUNGEON_CARD_2:         # 列表第 2 个副本（曙光圣庭，目前最新解锁，进去默认在中间）
+  click: [60, 500, 660, 780]
+PAGE_DUNGEON_DETAIL:    # 副本详情页图片左下「评级区间」
+  screen: dungeon_card
+  area: [40, 719, 106, 742]
+DUNGEON_TAB_NORMAL:     # 底部难度页签：普通 / 困难 / 噩梦 / 炼狱
+  click: [190, 1195, 260, 1245]
+DUNGEON_TAB_HARD:
+  click: [325, 1195, 395, 1245]
+DUNGEON_TAB_NIGHTMARE:
+  click: [460, 1195, 530, 1245]
+DUNGEON_TAB_HELL:
+  click: [575, 1195, 650, 1245]
+DUNGEON_LOCKED:         # 难度未解锁时底部灰条「解锁条件未达成」
+  screen: dungeon_hell
+  area: [268, 1084, 450, 1107]
+DUNGEON_EXHAUSTED:      # 「今日领奖次数已耗尽」
+  screen: dungeon_card
+  area: [242, 1022, 478, 1045]
+DUNGEON_ROUND:          # 副本战斗中顶部「回合：x/30」（和公会讨伐的回合字样长得不一样，通用的 BATTLE_ROUND 认不出）
+  screen: dungeon_battle
+  area: [357, 27, 397, 47]
+DUNGEON_RESULT:         # 副本结算页「掉落奖励」
+  screen: dungeon_result_s
+  area: [32, 864, 140, 896]
+DUNGEON_RATING_S:       # 结算页顶部评级字母 S（评级只有 S/A/B/C/D，详情页的「极佳S」也是 S）
+  screen: dungeon_result_s
+  area: [325, 195, 395, 300]
+DUNGEON_CLAIM:          # 结算页右下黄色「领取奖励」（领过变成灰色「已领取」）
+  screen: dungeon_result_s
+  area: [420, 1200, 610, 1235]
+  button: [360, 1188, 680, 1248]
+DUNGEON_CLAIMED:        # 领完后按钮变成灰色「已领取」
+  screen: dungeon_result_claimed
+  area: [420, 1200, 610, 1235]
+DUNGEON_CLAIM_CONFIRM:  # 「是否消耗1次领奖次数，领取1次本次副本奖励?」→ 确定
+  screen: dungeon_claim_confirm
+  area: [127, 513, 587, 547]
+  button: [373, 707, 613, 767]
+DUNGEON_BUY_PLUS:       # 详情页「每日领奖次数：x/2」右边的 +
+  click: [478, 1020, 506, 1048]
+DUNGEON_BUY_DIALOG:     # 「是否使用晨星购买日常副本领奖次数?」
+  screen: dungeon_buy_1
+  area: [173, 513, 536, 540]
+DUNGEON_BUY_ADD:        # 购买弹窗滑条右边的 +（1 次 → 2 次）
+  click: [578, 622, 614, 662]
+DUNGEON_BUY_COST_250:   # 买 2 次的总价「◆250」（100 + 150）
+  screen: dungeon_buy_2
+  area: [570, 580, 615, 605]
+DUNGEON_BUY_CONFIRM:    # 购买弹窗「购买」
+  click: [373, 717, 613, 771]
+DUNGEON_BUY_CANCEL:     # 购买弹窗「取消」
+  click: [110, 717, 345, 771]
+
+# 素材秘境
+PAGE_MATERIAL:          # 标题「素材秘境」
+  screen: material
+  area: [41, 36, 203, 66]
+MATERIAL_ONEKEY:        # 右下「一键购买」
+  click: [570, 1105, 690, 1145]
+MATERIAL_DIALOG:        # 一键购买弹窗标题
+  screen: material_buy_1111
+  area: [293, 263, 426, 294]
+MATERIAL_BUY:           # 弹窗「购买」
+  click: [400, 878, 590, 922]
+MATERIAL_CANCEL:        # 弹窗「取消」
+  click: [130, 878, 330, 922]
+MATERIAL_COUNT_1:       # 第 1 行组数显示「1」（其他行用同一个模板，往下每行 112 像素）
+  screen: material_buy_1111
+  area: [526, 436, 541, 454]
+MATERIAL_COUNT_4:
+  screen: material_buy_4444
+  area: [526, 436, 541, 454]
+MATERIAL_COST_240:      # 总价 240（四种各 1 组）
+  screen: material_buy_1111
+  area: [498, 887, 562, 912]
+MATERIAL_COST_1280:     # 总价 1280（四种各 4 组）
+  screen: material_buy_4444
+  area: [494, 887, 566, 912]
+
+# 素材秘境 → 黄金矿洞开采（买完工具后探索 N 次，完成「探索 N 次素材秘境」类任务）
+MATERIAL_GOLD_CAVE:     # 素材秘境右上「黄金矿洞」
+  click: [400, 170, 690, 560]
+MINE_CHECK:             # 矿洞左上「已开采金矿」标签（不含后面的数字）
+  screen: mine_gold
+  area: [20, 126, 147, 151]
+QUICK_MINE_OFF:         # 「快捷开采」开关在「关」；不是关就不挖，也不去动它
+  screen: mine_gold
+  area: [373, 1040, 457, 1071]
+MINE_BUTTON:            # 下方镐子开采按钮，点一下用 1 把镐子
+  click: [320, 880, 400, 955]
+
+# 羁绊冒险（奇景委派）
+NOTE_BOND:              # 笔记页右上「羁绊冒险」卡片
+  click: [430, 140, 700, 470]
+PAGE_BOND:              # 左上标题「羁绊冒险」（不含前面的「!」）
+  screen: bond_09_allnew
+  area: [80, 37, 205, 68]
+BOND_RED_BADGE:         # 委派完成：节点右上红色「!」（只取圆内）；按钮是节点本体（徽标左下）
+  screen: bond_01_main
+  area: [177, 192, 193, 206]
+  button: [117, 222, 147, 252]
+BOND_BLUE_BADGE:        # 可以委派：节点右上蓝色「!」；进行中的节点没有徽标，只有倒计时
+  screen: bond_09_allnew
+  area: [249, 183, 265, 197]
+  button: [189, 213, 219, 243]
+BOND_REFRESH:           # 右上「刷新奇景 ◆100」，连价格一起认
+  screen: bond_09_allnew
+  area: [528, 32, 710, 72]
+BOND_PANEL:             # 委派详情面板「委派成员」
+  screen: bond_10_detail1
+  area: [70, 563, 180, 595]
+BOND_QUICK:             # 面板「快速选择」：自动填满成员
+  screen: bond_10_detail1
+  area: [80, 1065, 340, 1120]
+BOND_START:             # 面板「开始委派」
+  screen: bond_10_detail1
+  area: [380, 1065, 640, 1120]
+BOND_COST_100:          # 刷新确认框「是否使用100晨星刷新一次奇景？」
+  screen: bond_19_refreshed
+  area: [180, 533, 540, 563]
+BOND_HQ_WARN:           # 刷新前的提醒「还有高品质景点没委派，是否刷新？」（有紫色及以上没派时出现）
+  screen: bond_18_refresh_tap
+  area: [160, 533, 560, 563]
+BOND_DIALOG_CONFIRM:    # 确认框「确定」
+  click: [380, 712, 620, 762]
+BOND_DIALOG_CANCEL:     # 确认框「取消」
+  click: [110, 712, 350, 762]
+BOND_POPUP:             # 「委派结束 / 委派开始」弹窗标题下的「—◆—」分隔线（两种弹窗高度不同，在区域里找）
+  screen: bond_02_node1
+  area: [335, 350, 385, 368]
+BOND_POPUP_BLANK:       # 关弹窗点的空白处：右下角地面（「挑战」按钮右边、底部页签上面），没弹窗时点到也无害
+  click: [580, 1100, 680, 1140]
+BOND_COUNT_4:           # 笔记页羁绊冒险卡片「奇景委派：4/4」的第一个数字（今天还能派几次）
+  screen: bond_00_note
+  area: [553, 195, 569, 214]
+BOND_COUNT_3:
+  screen: bond_21_note_after_refresh
+  area: [553, 195, 569, 214]
+BOND_COUNT_0:
+  screen: bond_37_note_final
+  area: [553, 195, 569, 214]
+
+# 地图探索 · 命运果实
+NOTE_MAP:               # 笔记页左边「地图探索」卡片
+  click: [60, 540, 360, 680]
+PAGE_MAP_EXPLORE:       # 标题「地图探索」
+  screen: map_explore_fate_ready
+  area: [35, 35, 175, 70]
+FATE_CLAIMABLE:         # 命运果实卡片左下果实礼包下面的「可领取」（每天一个，没到点时是倒计时）
+  screen: map_explore_fate_ready
+  area: [55, 627, 145, 650]
+FATE_GIFT:              # 果实礼包小图标，点一下直接领取，没有弹窗。旁边的「前往」会进地图，不点
+  click: [75, 575, 120, 620]

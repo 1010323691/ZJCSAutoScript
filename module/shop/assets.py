@@ -1,0 +1,23 @@
+# 本文件由 dev_tools/button_extract.py 生成，不要手改。改 assets/shop/define.yaml 后重新生成。
+from module.base.button import Button, ClickArea
+
+MERCHANT_BOARD = Button(name='MERCHANT_BOARD', area=(225, 838, 385, 890), color=(140, 117, 100), button=(280, 760, 360, 815), file='./assets/shop/MERCHANT_BOARD.png')
+MERCHANT_BOARD_DAY = Button(name='MERCHANT_BOARD_DAY', area=(385, 845, 495, 880), color=(195, 174, 167), button=(395, 765, 475, 815), file='./assets/shop/MERCHANT_BOARD_DAY.png')
+TEAM_INVITE = Button(name='TEAM_INVITE', area=(95, 912, 235, 938), color=(168, 171, 166), button=(95, 912, 235, 938), file='./assets/shop/TEAM_INVITE.png')
+PAGE_SHOP = Button(name='PAGE_SHOP', area=(41, 37, 101, 65), color=(131, 131, 130), button=(41, 37, 101, 65), file='./assets/shop/PAGE_SHOP.png')
+SHOP_TAB_GENERAL = ClickArea(name='SHOP_TAB_GENERAL', button=(190, 1195, 290, 1245))
+SHOP_TAB_VAULT = ClickArea(name='SHOP_TAB_VAULT', button=(363, 1195, 463, 1245))
+VAULT_TAB_ON = Button(name='VAULT_TAB_ON', area=(395, 1205, 465, 1238), color=(177, 178, 93), button=(395, 1205, 465, 1238), file='./assets/shop/VAULT_TAB_ON.png')
+VAULT_SOLD = Button(name='VAULT_SOLD', area=(100, 280, 165, 315), color=(193, 194, 192), button=(100, 280, 165, 315), file='./assets/shop/VAULT_SOLD.png')
+SHOP_REFRESH = ClickArea(name='SHOP_REFRESH', button=(520, 100, 690, 140))
+REFRESH_COUNT = Button(name='REFRESH_COUNT', area=(455, 100, 487, 136), color=(197, 198, 114), button=(455, 100, 487, 136), file='./assets/shop/REFRESH_COUNT.png')
+REFRESH_COIN = Button(name='REFRESH_COIN', area=(580, 103, 610, 133), color=(175, 158, 103), button=(580, 103, 610, 133), file='./assets/shop/REFRESH_COIN.png')
+SHOP_ONEKEY = Button(name='SHOP_ONEKEY', area=(212, 1086, 300, 1121), color=(177, 178, 97), button=(220, 1080, 500, 1130), file='./assets/shop/SHOP_ONEKEY.png')
+ONEKEY_ZERO = Button(name='ONEKEY_ZERO', area=(378, 1088, 440, 1122), color=(151, 140, 96), button=(378, 1088, 440, 1122), file='./assets/shop/ONEKEY_ZERO.png')
+SHOP_GEAR = ClickArea(name='SHOP_GEAR', button=(540, 1083, 582, 1125))
+DISCOUNT_DIALOG = Button(name='DISCOUNT_DIALOG', area=(224, 385, 496, 414), color=(144, 144, 144), button=(224, 385, 496, 414), file='./assets/shop/DISCOUNT_DIALOG.png')
+DISCOUNT_KNOB = Button(name='DISCOUNT_KNOB', area=(369, 573, 397, 601), color=(187, 190, 184), button=(369, 573, 397, 601), file='./assets/shop/DISCOUNT_KNOB.png')
+DISCOUNT_MINUS = ClickArea(name='DISCOUNT_MINUS', button=(131, 567, 171, 607))
+DISCOUNT_PLUS = ClickArea(name='DISCOUNT_PLUS', button=(549, 567, 589, 607))
+DIALOG_CANCEL = Button(name='DIALOG_CANCEL', area=(201, 770, 252, 794), color=(133, 134, 133), button=(120, 760, 340, 810), file='./assets/shop/DIALOG_CANCEL.png')
+DIALOG_CONFIRM = Button(name='DIALOG_CONFIRM', area=(467, 771, 518, 795), color=(129, 130, 72), button=(385, 760, 600, 810), file='./assets/shop/DIALOG_CONFIRM.png')

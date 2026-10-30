@@ -1,0 +1,106 @@
+# 公会页场景可以左右滑，而且重新进入不会复位，建筑位置不固定。
+# 用建筑下方的文字标签（界面元素，不受昼夜影响）定位，点标签正上方的建筑本体。
+GUILD_EXPEDITION_LABEL: # 「远征之门」标签
+  screen: scan_1
+  area: [317, 906, 409, 927]
+  button: [333, 805, 393, 865]
+GUILD_IDLE_CARD:        # 右下角的挂机卡片（固定在屏幕上，不随场景滑动），点一下直接领取，没有红点也能领
+  click: [583, 935, 643, 985]
+
+# 公会活动（远征之门内）
+PAGE_GUILD_ACTIVITY:    # 标题「公会活动」
+  screen: guild_activity
+  area: [40, 36, 167, 65]
+GUILD_WAR_CARD:
+  click: [100, 160, 620, 360]
+GUILD_RAID_CARD:
+  click: [100, 440, 620, 640]
+
+# 公会讨伐
+PAGE_GUILD_RAID:        # 标题「公会讨伐」
+  screen: guild_raid
+  area: [76, 36, 204, 64]
+RAID_CHALLENGE:         # 「挑战」
+  screen: guild_raid
+  area: [300, 960, 420, 1003]
+  button: [230, 962, 490, 1008]
+RAID_REMAIN_2:          # 今日剩余讨伐次数 2/2 的第一个数字
+  screen: guild_raid
+  area: [424, 40, 444, 64]
+RAID_REMAIN_1:
+  screen: guild_raid_after
+  area: [424, 40, 444, 64]
+RAID_REMAIN_0:
+  screen: guild_raid_zero2
+  area: [424, 40, 444, 64]
+RAID_START:             # 战前准备页「开始战斗」
+  screen: guild_raid_prep
+  area: [300, 925, 430, 968]
+  button: [225, 925, 495, 975]
+BATTLE_MINIMIZE:        # 战斗中左下角的最小化按钮，点了退出战斗画面、战斗在后台结算
+  screen: guild_raid_battle
+  area: [54, 1198, 94, 1238]
+  button: [25, 1185, 125, 1250]
+
+# 公会大厅 · 公会捐赠（每天 5 次：免费、20、50、100 …… 晨星，用户要求捐 3 次）
+GUILD_HALL_LABEL:       # 公会场景里「公会大厅」标签，点标签进「公会」页
+  screen: guild_scene_hall
+  area: [129, 616, 224, 643]
+PAGE_GUILD_HALL:        # 「公会」页左下「公会捐赠」按钮下的文字
+  screen: guild_hall
+  area: [170, 1085, 258, 1112]
+  button: [180, 995, 250, 1075]
+DONATE_DIALOG:          # 「公会捐赠」弹窗标题
+  screen: donate_free
+  area: [290, 217, 430, 253]
+DONATE_COUNT_0:         # 「每日捐赠次数：0/5」里的第一个数字（只框数字，带上「/5」会互相认错）
+  screen: donate_free
+  area: [415, 883, 431, 904]
+DONATE_COUNT_1:
+  screen: donate_paid20
+  area: [415, 883, 431, 904]
+DONATE_COUNT_2:
+  screen: donate_paid50
+  area: [415, 883, 431, 904]
+DONATE_FREE:            # 第 1 次「免费捐赠」
+  screen: donate_free
+  area: [273, 925, 440, 962]
+  button: [240, 915, 480, 970]
+DONATE_20:              # 第 2 次「捐赠 ◆20」，只框价格数字（带上「捐赠」二字时 20 和 50 互相 0.94）
+  screen: donate_paid20
+  area: [389, 930, 428, 957]
+  button: [240, 915, 480, 970]
+DONATE_50:              # 第 3 次「捐赠 ◆50」
+  screen: donate_paid50
+  area: [389, 930, 428, 957]
+  button: [240, 915, 480, 970]
+DONATE_CONFIRM_20:      # 「是否使用20晨星额外捐赠一次?」里的「20」
+  screen: donate_confirm20
+  area: [285, 535, 317, 561]
+  button: [380, 712, 620, 762]
+DONATE_CONFIRM_50:
+  screen: donate_confirm50
+  area: [285, 535, 317, 561]
+  button: [380, 712, 620, 762]
+
+# 公会战（周一、三、五 本机 11:00～23:00）
+GUILD_WAR_CARD:         # 公会活动页上面的「公会战」卡片
+  click: [60, 150, 660, 380]
+GUILD_WAR_ENTER:        # 公会战主页「进入对战」（不在对战时间没有这个按钮）
+  screen: guild_war_main
+  area: [304, 973, 416, 1003]
+  button: [235, 960, 485, 1020]
+PAGE_GUILD_WAR_MAP:     # 对战地图右上「公会战进行中」
+  screen: guild_war_map0
+  area: [557, 37, 700, 64]
+GUILD_WAR_ATTACK:       # 点对手后的「进攻对手」弹窗标题
+  screen: guild_war_attack_dialog
+  area: [293, 203, 427, 237]
+GUILD_WAR_GOTO:         # 弹窗里「前往挑战」
+  screen: guild_war_attack_dialog
+  area: [287, 1047, 433, 1080]
+  button: [225, 1032, 495, 1092]
+GUILD_WAR_START:        # 战斗准备页「开始战斗」（有 60 秒准备倒计时）
+  screen: guild_war_prep
+  area: [300, 940, 420, 970]
+  button: [220, 925, 500, 990]

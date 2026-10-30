@@ -1,0 +1,145 @@
+# 参数定义表：配置界面按它生成表单，脚本按它补全默认值。对应 ALAS 的 module/config/argument/argument.yaml。
+#
+# 每个分组：
+#   _name: 界面上显示的名字
+#   _menu: 界面左侧菜单分类
+#   参数名:
+#     type: checkbox / input / number / float / select
+#     value: 默认值
+#     name: 界面显示名
+#     help: 说明（可选）
+#     option: select 的选项（可选）
+
+Device:
+  _name: 设备
+  _menu: 设置
+  Serial: {type: input, value: emulator-5556, name: 设备序列号, help: 雷电实例 1 是 emulator-5556}
+  AdbExecutable: {type: input, value: 'D:\app\ldplayer14\adb.exe', name: adb 路径, help: 用雷电自带的 adb，和本机其他脚本同版本}
+  PackageName: {type: input, value: com.leiting.zjcs, name: 游戏包名}
+  ScreenshotMethod: {type: select, value: adb_raw, option: [adb_raw, adb_png], name: 截图方式}
+  ScreenshotInterval: {type: float, value: 0.3, name: 截图最短间隔（秒）}
+
+Scheduler:
+  _name: 调度
+  _menu: 设置
+  ServerUpdate: {type: input, value: '08:00', name: 每日刷新时间（服务器时间）, help: 游戏按北京时间 8:00 刷新}
+  ServerTimezone: {type: float, value: 8, name: 服务器时区, help: 北京时间 UTC+8；本机在日本（UTC+9），所以本机 9:00 刷新}
+  FailureLimit: {type: number, value: 3, name: 连续失败几次后停止}
+
+Notify:
+  _name: 通知
+  _menu: 设置
+  Enable: {type: checkbox, value: true, name: 发系统通知, help: Windows 右下角弹出，也会留在通知中心}
+  Human: {type: checkbox, value: true, name: 需要人工处理时, help: 连续失败到上限、设备不在线、脚本出错而停下时}
+  Finish: {type: checkbox, value: false, name: 今天的任务都跑完时, help: 常驻运行时，到期的任务全部做完、开始等下一次刷新时发一条汇总}
+
+GeneralShop:
+  _name: 杂货商店
+  _menu: 商店
+  Enable: {type: checkbox, value: false, name: 启用}
+  Discount: {type: select, value: 7, option: [3, 4, 5, 6, 7, 8, 9, 全部], name: 一键购买折扣, help: 一键购买 X 折及以下的限购商品（游戏里的滑块会被调到这个值，范围 3 折～全部）}
+  RefreshTimes: {type: number, value: -1, name: 刷新次数, help: -1 表示把刷新次数用光；0 表示不刷新}
+
+Vault:
+  _name: 宝库
+  _menu: 商店
+  Enable: {type: checkbox, value: false, name: 启用}
+  Items: {type: input, value: '1,2,3,4,5', name: 购买第几个商品, help: 从左到右、从上到下数，逗号分隔；已售罄的会跳过；限购多次的买满；点了直接买，没有确认框}
+
+CandyTree:
+  _name: 糖果树
+  _menu: 日常领取
+  Enable: {type: checkbox, value: false, name: 启用, help: 树上有糖果时点一下收获；没有糖果绝不点树（第二下会进抽奖页）}
+
+Cart:
+  _name: 小推车
+  _menu: 日常领取
+  Enable: {type: checkbox, value: false, name: 启用, help: 每次一条龙点一下，领取挂机产出}
+
+HomeHouse:
+  _name: 家园小屋
+  _menu: 日常领取
+  Enable: {type: checkbox, value: false, name: 启用, help: 床：领经验气泡、用今日免费加速（2 小时）；信箱：有红点就全部领取（不点删除已读）}
+
+DailyDungeon:
+  _name: 日常副本
+  _menu: 笔记
+  Enable: {type: checkbox, value: false, name: 启用}
+  Dungeon: {type: select, value: 最新, option: [最新, 磐岩斗阵, 曙光圣庭], name: 打哪个副本, help: 最新 = 进去时默认在中间的副本}
+  BuyExtra: {type: checkbox, value: true, name: 购买额外次数, help: 每天限购 2 次，共 250 晨星（100 + 150），买满后每天打 4 次}
+
+BondAdventure:
+  _name: 羁绊冒险
+  _menu: 笔记
+  Enable: {type: checkbox, value: false, name: 启用, help: 只做奇景委派（领完成的、派新的），不打「挑战」}
+  RefreshLimit: {type: number, value: 3, name: 每天最多刷新次数, help: 每次 100 晨星；4 个委派里紫色及以上不到 2 个才刷，价格不是 100 不刷}
+
+FateFruit:
+  _name: 命运果实
+  _menu: 笔记
+  Enable: {type: checkbox, value: false, name: 启用, help: 地图探索里命运果实卡片左下的免费果实，倒计时中会跳过}
+
+Arena:
+  _name: 竞技场
+  _menu: 笔记
+  Enable: {type: checkbox, value: false, name: 启用}
+  BuyTickets: {type: number, value: 3, name: 购买挑战票张数}
+  Challenges: {type: number, value: 3, name: 挑战次数, help: 每次都挑战选择对手里的最后一个（扫荡，直接出结果）}
+
+MaterialRealm:
+  _name: 素材秘境
+  _menu: 笔记
+  Enable: {type: checkbox, value: false, name: 启用}
+  BuyCount: {type: input, value: '4444', name: 一键购买组数, help: 4 位数字依次是锤子、镐子、手套、铲子的组数}
+  ExpectedCost: {type: number, value: 1280, name: 预期钻石花费, help: 调好组数后总价必须等于这个数才会购买，否则跳过}
+  MineTimes: {type: number, value: 10, name: 黄金矿洞开采次数, help: 买完后去黄金矿洞开采几次（每次 1 把镐子），完成「探索素材秘境」类任务；不开快捷开采}
+
+HolyBeastTrial:
+  _name: 圣兽试炼
+  _menu: 每日活动
+  Enable: {type: checkbox, value: false, name: 启用, help: 匹配 → 接受 → 等自动战斗打完}
+
+TwinShadow:
+  _name: 双影幻境
+  _menu: 每日活动
+  Enable: {type: checkbox, value: false, name: 启用, help: 匹配 → 接受 → 等自动战斗打完；不开无尽模式}
+
+GuildIdleReward:
+  _name: 公会挂机奖励
+  _menu: 公会
+  Enable: {type: checkbox, value: false, name: 启用}
+
+GuildDonate:
+  _name: 公会捐赠
+  _menu: 公会
+  Enable: {type: checkbox, value: false, name: 启用}
+  Times: {type: number, value: 3, name: 每天捐几次, help: 第 1 次免费，第 2、3 次各 20、50 晨星；最多 3 次（第 4 次 100 晨星，不做）}
+
+GuildWar:
+  _name: 公会战
+  _menu: 公会
+  Enable: {type: checkbox, value: false, name: 启用, help: 周一、三、五 11:00~23:00（本机时间）开放；9 点跑到时还没开放，会推迟到 11:01 再跑}
+  Challenges: {type: number, value: 3, name: 挑战次数}
+  PowerRatio: {type: float, value: 0.8, name: 对手战力上限比例, help: 从上往下找，挑战第一个战力 ≤ 自身 × 比例的对手，打过的不再打}
+
+GuildRaid:
+  _name: 公会讨伐
+  _menu: 公会
+  Enable: {type: checkbox, value: false, name: 启用}
+  Challenges: {type: number, value: 2, name: 挑战次数, help: 开始战斗后立刻返回，战斗在后台结算}
+
+DailyReward:
+  _name: 领取奖励
+  _menu: 领取奖励
+  Enable: {type: checkbox, value: false, name: 启用, help: 日常都清完后统一领取各处奖励；绝不点刮刮乐、卡池和付费按钮}
+  SignIn: {type: checkbox, value: true, name: 每日签到, help: 精彩活动 → 每日签到}
+  Mibao: {type: checkbox, value: true, name: 秘宝大作战, help: 只领「获取能量」的任务能量，不做封印宝藏兑换}
+  Fate: {type: checkbox, value: true, name: 秘宝大作战·命运探索, help: 「命运探索1次」没完成时，点前往到大地图点一次「探索」（消耗 1 枚命运果实）}
+  Season: {type: checkbox, value: true, name: 赛季活动·晶芒淬炼, help: 三个页签里的「领取」}
+  Party: {type: checkbox, value: true, name: 惊魂派对, help: 惊奇日签、怪谈手册任务和基础奖励}
+  Mall: {type: checkbox, value: true, name: 商城免费项, help: 每日特惠的「每日赠礼」和月卡每日奖励，付费按钮不点}
+  Pass: {type: checkbox, value: true, name: 巡礼之证, help: 「巡礼目标」任务经验和左列免费等级奖励；「购买等级」和 68 元解锁不点}
+  Friend: {type: checkbox, value: true, name: 好友, help: 好友页底部的爱心按钮}
+  Gift: {type: checkbox, value: true, name: 馈赠总览, help: 战力、装备强化等里程碑奖励}
+  Task: {type: checkbox, value: true, name: 任务·日常, help: 日常任务的「领取」}
+  Commission: {type: checkbox, value: true, name: 任务·委托提交, help: 有「提交」的委托都提交，会扣材料}

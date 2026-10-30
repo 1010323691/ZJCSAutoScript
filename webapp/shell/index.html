@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>一条龙</title>
+<style>
+  /* 桌面壳的启动页：配置服务起来之前显示，颜色和配置界面的「墨色」主题一致，深浅色跟随系统 */
+  :root {
+    --bg: #F4F4F2; --surface: #FFFFFF; --ink: #1C1C1A; --ink2: #555550; --ink3: #6B6B66;
+    --line: #E4E4E0; --line2: #D2D2CD; --accent: #2A2A28; --on-accent: #FFFFFF;
+    --danger: #B42318; --danger-soft: #FDECEA; --sunken: #F8F8F6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121212; --surface: #1B1B1B; --ink: #EDEDE8; --ink2: #B8B8B2; --ink3: #96968F;
+      --line: #2C2C2A; --line2: #3A3A37; --accent: #EDEDE8; --on-accent: #121212;
+      --danger: #FF8A7A; --danger-soft: #3A1B17; --sunken: #171717;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: grid; place-items: center; padding: 32px;
+    background: var(--bg); color: var(--ink);
+    font-family: 'Microsoft YaHei UI', 'Microsoft YaHei', 'PingFang SC', sans-serif; font-size: 15px; line-height: 1.6;
+    -webkit-font-smoothing: antialiased; user-select: none;
+  }
+  .box { width: min(560px, 100%); display: flex; flex-direction: column; align-items: center; gap: 18px; text-align: center; }
+  .mark { width: 96px; height: 96px; display: block; }
+  h1 { margin: 0; font-size: 24px; font-weight: 800; }
+  .stage { display: flex; align-items: center; gap: 10px; color: var(--ink2); min-height: 26px; }
+  .spinner { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid var(--line2); border-top-color: var(--accent); animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .error { display: none; width: 100%; flex-direction: column; gap: 12px; text-align: left; }
+  .error h2 { margin: 0; font-size: 18px; font-weight: 800; color: var(--danger); text-align: center; }
+  .error pre {
+    margin: 0; max-height: 46vh; overflow: auto; padding: 14px 16px; border-radius: 12px;
+    background: var(--surface); border: 1px solid var(--line); color: var(--ink2);
+    font-family: ui-monospace, 'Cascadia Mono', Consolas, 'Microsoft YaHei UI', monospace; font-size: 13px;
+    white-space: pre-wrap; word-break: break-all; user-select: text;
+  }
+  .error p { margin: 0; font-size: 13px; color: var(--ink3); text-align: center; }
+  body.failed .stage { display: none; }
+  body.failed .error { display: flex; }
+  body.failed .mark { filter: grayscale(1); }
+</style>
+</head>
+<body>
+<main class="box">
+  <img class="mark" src="icon.png" alt="" aria-hidden="true" draggable="false">
+  <h1>一条龙</h1>
+  <div class="stage" role="status"><span class="spinner" aria-hidden="true"></span><span id="stage">正在启动…</span></div>
+  <section class="error" role="alert">
+    <h2 id="error-title"></h2>
+    <pre id="error-detail"></pre>
+    <p>处理好之后，关掉这个窗口重新打开 zjcs.exe。</p>
+  </section>
+</main>
+<script>
+  // 桌面壳（main.rs）通过 eval 调用这两个方法报告启动进度
+  window.zjcsStartup = {
+    stage(text) { document.getElementById('stage').textContent = text; },
+    error(title, detail) {
+      document.getElementById('error-title').textContent = title;
+      document.getElementById('error-detail').textContent = detail;
+      document.body.classList.add('failed');
+    },
+  };
+</script>
+</body>
+</html>

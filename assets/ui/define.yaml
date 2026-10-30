@@ -1,0 +1,52 @@
+# 底部导航：选中的页签下方会出现「角色 / 笔记 / 家园 / 公会 / 世界」文字标签，用它识别当前页面。
+PAGE_ROLE_CHECK:
+  screen: page_role
+  area: [52, 1253, 108, 1276]
+PAGE_NOTE_CHECK:
+  screen: page_note
+  area: [192, 1253, 248, 1276]
+PAGE_HOME_CHECK:
+  screen: page_home2
+  area: [332, 1253, 388, 1276]
+PAGE_GUILD_CHECK:
+  screen: page_guild
+  area: [471, 1253, 528, 1276]
+PAGE_WORLD_CHECK:
+  screen: page_world
+  area: [611, 1253, 668, 1276]
+
+# 子页面和弹窗左下角的「<」返回按钮（黑色胶囊 + 白色箭头）
+BACK_ARROW:
+  screen: login_11
+  area: [45, 1197, 100, 1240]
+  button: [25, 1185, 125, 1250]
+
+# 通用「获得奖励」弹窗（黄色横幅）。物品多时弹窗更高、横幅往上移约 26 像素，识别时上下要多搜一些（REWARD_OFFSET）。
+# 点弹窗外面的屏幕顶部关闭（点弹窗里面可能点到物品）
+GET_REWARD_CHECK:
+  screen: guild_idle_nodot
+  area: [240, 353, 478, 397]
+  button: [300, 170, 420, 230]
+
+# 战斗结算页底部「点击空白处关闭」（公会讨伐等后台战斗打完后弹出）
+BATTLE_RESULT_CLOSE:
+  screen: guild_raid_zero
+  area: [264, 1192, 454, 1216]
+  button: [200, 1180, 520, 1240]
+
+# 战斗画面顶部的「回合：x/y」，用来判断正在战斗（公会讨伐在 x=305，圣兽试炼在 x=367，识别时左右多搜 90 像素）
+BATTLE_ROUND:
+  screen: guild_raid_prep
+  area: [305, 27, 345, 47]
+
+# 底部导航按钮（只点击）
+NAV_ROLE:
+  click: [82, 1208, 132, 1258]
+NAV_NOTE:
+  click: [204, 1204, 254, 1254]
+NAV_HOME:
+  click: [335, 1190, 385, 1240]
+NAV_GUILD:
+  click: [478, 1204, 528, 1254]
+NAV_WORLD:
+  click: [615, 1204, 665, 1254]

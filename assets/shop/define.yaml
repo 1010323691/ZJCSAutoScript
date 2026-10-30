@@ -1,0 +1,65 @@
+# 家园商店（广场商人推车）
+MERCHANT_BOARD:         # 商人推车前面带「1」字的招牌（夜晚），点招牌正上方的车身进商店。左边约 150 像素是扭蛋机，绝对不能点
+  screen: hscan_4
+  area: [225, 838, 385, 890]
+  button: [280, 760, 360, 815]
+MERCHANT_BOARD_DAY:     # 同一块招牌（白天，场景有昼夜循环）。只取中间「1」到右边丝带，左半常被路过的角色挡住；点击位置同样是招牌上方的车身
+  screen: home_day_cart
+  area: [385, 845, 495, 880]
+  button: [395, 765, 475, 815]
+TEAM_INVITE:            # 家园底部弹出的「挑战赛组队邀请」（拒绝 / 查看），会挡住推车招牌。只等它消失，不点
+  screen: home_team_invite
+  area: [95, 912, 235, 938]
+
+PAGE_SHOP:              # 标题「商店」
+  screen: shop_general
+  area: [41, 37, 101, 65]
+SHOP_TAB_GENERAL:       # 底部页签「杂货」
+  click: [190, 1195, 290, 1245]
+SHOP_TAB_VAULT:         # 底部页签「宝库」
+  click: [363, 1195, 463, 1245]
+VAULT_TAB_ON:           # 「宝库」页签选中（黄底）。点商品后不在宝库页说明弹了别的东西（例如钻石不足），立刻停
+  screen: vault_list
+  area: [395, 1205, 465, 1238]
+VAULT_SOLD:             # 商品格子中间的「售罄」章（第 1 件的位置，其他格子按间距平移）
+  screen: vault_two_sold
+  area: [100, 280, 165, 315]
+
+# 杂货
+SHOP_REFRESH:           # 右上「刷新」按钮
+  click: [520, 100, 690, 140]
+REFRESH_COUNT:          # 刷新按钮左边圆圈里的剩余次数（只用来判断刷新前后有没有变化）
+  screen: shop_refresh1
+  area: [455, 100, 487, 136]
+REFRESH_COIN:           # 刷新价格前面的罗拉图标；不是罗拉就不刷新，避免花钻石
+  screen: shop_refresh1
+  area: [580, 103, 610, 133]
+SHOP_ONEKEY:            # 底部「一键购买」
+  screen: shop_general
+  area: [212, 1086, 300, 1121]
+  button: [220, 1080, 500, 1130]
+ONEKEY_ZERO:            # 「一键购买 0」：没有符合折扣的商品
+  screen: shop_onekey
+  area: [378, 1088, 440, 1122]
+SHOP_GEAR:              # 一键购买右边的齿轮
+  click: [540, 1083, 582, 1125]
+
+# 「一键购买限购道具」弹窗
+DISCOUNT_DIALOG:        # 弹窗标题
+  screen: shop_discount_7
+  area: [224, 385, 496, 414]
+DISCOUNT_KNOB:          # 滑块头：3 折在 x=190，往右每档 48.6 像素，最右是「全部」（x=530）
+  screen: shop_discount_7
+  area: [369, 573, 397, 601]
+DISCOUNT_MINUS:
+  click: [131, 567, 171, 607]
+DISCOUNT_PLUS:
+  click: [549, 567, 589, 607]
+DIALOG_CANCEL:          # 弹窗左边「取消」
+  screen: shop_discount_7
+  area: [201, 770, 252, 794]
+  button: [120, 760, 340, 810]
+DIALOG_CONFIRM:         # 弹窗右边「确认」
+  screen: shop_discount_7
+  area: [467, 771, 518, 795]
+  button: [385, 760, 600, 810]
