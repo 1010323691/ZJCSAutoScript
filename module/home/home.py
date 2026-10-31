@@ -31,7 +31,9 @@ class HomeScene(UI):
         """从最左端开始，每次往右看大约半屏，每到一个位置截一张图"""
         self.scene_to_left_end()
         for step in range(steps):
-            self.device.swipe((650, 450), (350, 450), duration=1500, name='SCENE_RIGHT')
+            # 起点要避开右侧 x≥610 的活动图标列：10-31 多出「限时礼包」图标，把「挑战赛」挤到 y≈450，
+            # 从 (650, 450) 起手的拖动被图标接走，场景不动。起点 x=560 实测正常
+            self.device.swipe((560, 330), (260, 330), duration=1500, name='SCENE_RIGHT')
             time.sleep(1)
             self.device.screenshot()
             yield step

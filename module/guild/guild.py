@@ -191,9 +191,8 @@ class GuildDonate(GuildUI):
                     self.device.back()
                     return False
         self.device.click_record.clear()
-        # 关掉捐赠弹窗
-        self.device.back()
-        self.wait_until_appear(PAGE_GUILD_HALL, offset=(10, 10), timeout=6)
+        # 关掉捐赠弹窗。原来按返回键，10-31 捐完正赶上动画被吞掉，弹窗一直开着，下一个任务认不出页面
+        self.ui_close_popup(DONATE_DIALOG, PAGE_GUILD_HALL)
         return True
 
 

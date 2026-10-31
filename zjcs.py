@@ -77,12 +77,32 @@ class ZjcsAutoScript:
         except (GameStuckError, GameTooManyClickError, GamePageUnknownError, GameNotRunningError) as e:
             logger.error(f'任务 {command} 出错: {type(e).__name__} {e}')
             self.save_error_log()
-            # 重启游戏回到家园，本任务记一次失败，连续失败到上限会停下来请求人工
-            self.restart()
+            # 先试着不重启回到家园（多半是没关掉的弹窗，点外面就关）；回不去再重启游戏。
+            # 本任务都记一次失败，连续失败到上限会停下来请求人工
+            if isinstance(e, GameNotRunningError) or not self.recover():
+                self.restart()
             return 'failed'
         except (ScriptError, RequestHumanTakeover):
             self.save_error_log()
             raise
+
+    def recover(self):
+        """
+        出错后先不重启：识别当前页面（认不出时会点上方空白处关弹窗，见 UI.ui_get_current_page），
+        能回到家园就接着跑下一项（用户 10-31：认不出的弹窗一般点一下四周就关）。
+        """
+        from module.ui.page import page_home
+        from module.ui.ui import UI
+        logger.info('先试着不重启，回到家园')
+        self.device.stuck_record_clear()
+        self.device.click_record.clear()
+        try:
+            UI(self.config, device=self.device).ui_ensure(page_home)
+        except (GameStuckError, GameTooManyClickError, GamePageUnknownError, GameNotRunningError) as e:
+            logger.warning(f'回不到家园（{type(e).__name__}），重启游戏')
+            return False
+        logger.info('已回到家园，不用重启')
+        return True
 
     def restart(self):
         from module.handler.login import LoginHandler

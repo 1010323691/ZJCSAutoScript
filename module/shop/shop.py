@@ -101,26 +101,32 @@ class GeneralShop(ShopUI):
         return False
 
     def refresh(self):
-        """刷新一次。只在价格是罗拉时刷新；点了次数没变化或弹出对话框就停"""
+        """刷新一次。只在价格是罗拉时刷新；点了没反应就补点，补点也没变化或弹出对话框就停"""
         self.device.screenshot()
         if not self.appear(REFRESH_COIN, offset=(40, 5)):
             logger.info('刷新价格不是罗拉（或次数已用完），停止刷新')
             return False
         before = crop(self.device.image, REFRESH_COUNT.area)
-        self.device.click(SHOP_REFRESH)
-        # 游戏有时反应慢，最多等 4 秒看次数有没有变化
-        for _ in range(8):
-            time.sleep(0.5)
-            self.device.screenshot()
-            if self.appear(DIALOG_CANCEL, offset=(20, 20)):
-                logger.info('刷新弹出了对话框，取消并停止')
-                self.device.click(DIALOG_CANCEL)
-                return False
-            after = crop(self.device.image, REFRESH_COUNT.area)
-            if cv2.matchTemplate(after, before, cv2.TM_CCOEFF_NORMED)[0][0] < 0.95:
+        # 游戏有时没接住这一下（10-31 第 4 次刷新点了没反应就停了）：等 5 秒次数还没变就再点，最多点 3 次
+        for attempt in range(3):
+            if attempt:
+                logger.info(f'刷新没有反应，再点一次（第 {attempt + 1} 次）')
+                if not self.appear(REFRESH_COIN, offset=(40, 5)):
+                    logger.info('刷新价格不是罗拉了，停止刷新')
+                    return False
+            self.device.click(SHOP_REFRESH)
+            for _ in range(10):
                 time.sleep(0.5)
-                return True
-        logger.info('刷新次数没有变化，停止刷新')
+                self.device.screenshot()
+                if self.appear(DIALOG_CANCEL, offset=(20, 20)):
+                    logger.info('刷新弹出了对话框，取消并停止')
+                    self.device.click(DIALOG_CANCEL)
+                    return False
+                after = crop(self.device.image, REFRESH_COUNT.area)
+                if cv2.matchTemplate(after, before, cv2.TM_CCOEFF_NORMED)[0][0] < 0.95:
+                    time.sleep(0.5)
+                    return True
+        logger.info('点了 3 次刷新次数都没有变化，停止刷新')
         return False
 
     def run(self):

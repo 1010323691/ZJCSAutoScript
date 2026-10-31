@@ -1,3 +1,4 @@
+import time
 from collections import deque
 
 from module.base.timer import Timer
@@ -5,11 +6,12 @@ from module.device.control import Control
 from module.device.screenshot import Screenshot
 from module.exception import GameNotRunningError, GameStuckError, GameTooManyClickError
 from module.logger import logger
+from module.ui.assets import GIFT_POPUP_CLOSE, GIFT_POPUP_FOOTER, GIFT_POPUP_TIMER
 
 
 class Device(Screenshot, Control):
     """
-    设备 = 截图 + 点击，再加两道保险：
+    设备 = 截图 + 点击，截图时顺手关掉付费礼包弹窗，再加两道保险：
     - 卡死检测：一段时间内只截图、没有点击，抛 GameStuckError
     - 连点检测：最近 15 次点击里同一个按钮占 12 次，抛 GameTooManyClickError
     """
@@ -23,7 +25,20 @@ class Device(Screenshot, Control):
 
     def screenshot(self):
         self.stuck_record_check()
-        return super().screenshot()
+        image = super().screenshot()
+        # 付费礼包弹窗任何操作之后都可能弹出，挡住页面，在这里统一关掉，各任务不用管
+        for _ in range(3):
+            if not self.gift_popup_appear(image):
+                break
+            logger.info('关闭付费礼包弹窗')
+            super().click(GIFT_POPUP_CLOSE)
+            time.sleep(1.5)
+            image = super().screenshot()
+        return image
+
+    @staticmethod
+    def gift_popup_appear(image):
+        return GIFT_POPUP_TIMER.match(image, offset=(30, 150)) and GIFT_POPUP_FOOTER.match(image, offset=(30, 150))
 
     # ---------- 卡死检测 ----------
     def stuck_record_clear(self):

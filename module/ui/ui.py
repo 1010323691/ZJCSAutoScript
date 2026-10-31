@@ -1,7 +1,10 @@
+import time
+
 from module.base.base import ModuleBase
 from module.base.timer import Timer
 from module.exception import GamePageUnknownError
 from module.logger import logger
+from module.ui.assets import POPUP_OUTSIDE
 from module.ui.page import Page, page_guild, page_home, page_note, page_role, page_world
 
 # 「获得奖励」横幅的位置随物品多少上下变化
@@ -18,9 +21,12 @@ class UI(ModuleBase):
 
         不会盲按返回键：有些页面按返回会关掉主菜单或弹出退出确认，
         按错了反而更难恢复，交给人工处理。
+        兜底：认不出 3 秒就点一下上方空白处，大多数没关掉的弹窗点外面就关（用户 10-31），最多点 2 次。
         """
         logger.info('UI get current page')
         timer = Timer(timeout, count=5).start()
+        dismiss = Timer(3, count=3).start()
+        dismissed = 0
         while 1:
             if skip_first_screenshot:
                 skip_first_screenshot = False
@@ -35,12 +41,20 @@ class UI(ModuleBase):
                 continue
             if timer.reached():
                 break
+            if dismissed < 2 and dismiss.reached():
+                logger.info('认不出当前画面，点上方空白处试着关掉弹窗')
+                self.device.click(POPUP_OUTSIDE)
+                dismissed += 1
+                dismiss.reset()
         logger.warning('无法识别当前页面')
         raise GamePageUnknownError
 
     def ui_goto(self, destination, skip_first_screenshot=True):
         logger.hr(f'UI goto {destination}', level=3)
         Page.init_connection(destination)
+        # 兜底：一直认不出页面（半路弹出没见过的弹窗）就隔 3 秒点一下上方空白处，最多 3 次，之后交给卡死检测
+        unknown = Timer(3, count=3).start()
+        dismissed = 0
         while 1:
             if skip_first_screenshot:
                 skip_first_screenshot = False
@@ -63,8 +77,16 @@ class UI(ModuleBase):
                     clicked = True
                     break
             if clicked:
+                unknown.reset()
                 continue
-            self.ui_additional()
+            if self.ui_additional():
+                unknown.reset()
+                continue
+            if dismissed < 3 and unknown.reached():
+                logger.info('切换页面时认不出画面，点上方空白处试着关掉弹窗')
+                self.device.click(POPUP_OUTSIDE)
+                dismissed += 1
+                unknown.reset()
 
     def ui_ensure(self, destination, skip_first_screenshot=False):
         """确保在目标页面；本来就在返回 False，切换过返回 True"""
@@ -134,6 +156,26 @@ class UI(ModuleBase):
             self.device.click(BATTLE_RESULT_CLOSE)
             return True
         return False
+
+    def ui_close_popup(self, popup, until, timeout=10):
+        """
+        点弹窗外面（上方空白处）关掉 popup，直到 until 出现。没关上就隔 2 秒再点。
+        返回键在弹窗的动画期间会被吞掉（10-31 信件、公会捐赠都因此没关上），点外面更稳。
+        """
+        timer = Timer(timeout).start()
+        while 1:
+            self.device.screenshot()
+            if self.appear(until, offset=(10, 10)):
+                return True
+            if timer.reached():
+                logger.warning(f'{popup} 关了 {timeout} 秒还没回到 {until}')
+                raise GamePageUnknownError
+            if self.ui_additional():
+                continue
+            if self.appear(popup, offset=(10, 10), interval=2):
+                self.device.click(POPUP_OUTSIDE)
+                continue
+            time.sleep(0.5)
 
     def wait_reward_popup(self, page, timeout=5):
         """点了领取类按钮后，等「获得奖励」弹窗出现（有动画，会晚一两秒）并关掉，回到 page"""
