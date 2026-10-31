@@ -10,7 +10,9 @@ from module.exception import GamePageUnknownError
 from module.home.assets import *
 from module.home.home import HomeScene
 from module.logger import logger
+from module.ui.assets import GET_REWARD_CHECK
 from module.ui.page import page_home
+from module.ui.ui import REWARD_OFFSET
 
 # 场景划到最右端（小屋）后，床上方经验气泡的红点范围
 BUBBLE_DOT_REGION = (110, 440, 210, 540)
@@ -32,7 +34,8 @@ class HomeHouse(HomeScene):
 
     def scene_to_right_end(self):
         for _ in range(6):
-            self.device.swipe((650, 450), (100, 450), duration=600, name='SCENE_RIGHT_FAST')
+            # 起点避开右侧活动图标列（见 HomeScene.scene_steps）
+            self.device.swipe((560, 330), (10, 330), duration=600, name='SCENE_RIGHT_FAST')
         time.sleep(1.5)
         self.device.screenshot()
 
@@ -109,8 +112,8 @@ class HomeHouse(HomeScene):
             self.claim_bubble()
 
     def mailbox(self):
+        """紧接着床做：领气泡、关床弹窗都不会动视角（用户 10-31 说明），还在最右端，直接往回拖到信箱"""
         logger.hr('Mailbox', level=3)
-        self.scene_to_right_end()
         self.device.swipe((150, 450), (600, 450), duration=1500, name='SCENE_LEFT_SLOW')
         time.sleep(1.5)
         self.device.screenshot()
@@ -134,20 +137,24 @@ class HomeHouse(HomeScene):
         if self.appear(MAIL_CLAIM_ALL, offset=(10, 10)):
             logger.info('信件全部领取')
             self.device.click(MAIL_CLAIM_ALL)
-            timer = Timer(8).start()
-            while 1:
-                self.device.screenshot()
-                if self.ui_additional():
-                    continue
-                if self.appear(MAIL_DIALOG, offset=(10, 10)) and not self.appear(MAIL_CLAIM_ALL, offset=(10, 10)):
-                    break
-                if timer.reached():
-                    raise GamePageUnknownError
-                time.sleep(0.5)
+            # 「获得奖励」横幅盖在信件弹窗上，晚一两秒才出来；按钮先消失，不等横幅就去关弹窗会点空（10-31 卡住的原因）
+            if self.wait_until_appear(GET_REWARD_CHECK, offset=REWARD_OFFSET, timeout=5):
+                timer = Timer(8).start()
+                while 1:
+                    self.device.screenshot()
+                    if self.ui_additional():
+                        continue
+                    if self.appear(MAIL_DIALOG, offset=(10, 10)) and not self.appear(GET_REWARD_CHECK, offset=REWARD_OFFSET):
+                        break
+                    if timer.reached():
+                        raise GamePageUnknownError
+                    time.sleep(0.5)
+            else:
+                logger.info('没有出现「获得奖励」弹窗')
         else:
             logger.info('没有「全部领取」按钮，信件已经领过')
-        self.device.back()
-        self.wait_home()
+        # 信件弹窗没有返回键，点弹窗外面关（用户说明 10-31）
+        self.ui_close_popup(MAIL_DIALOG, page_home.check_button)
         return True
 
     def run(self):

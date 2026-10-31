@@ -156,13 +156,13 @@ class DailyReward(UI):
             raise GamePageUnknownError
 
     # ---------------- 精彩活动 ----------------
-    def open_event_card(self, card, check):
-        """活动汇总里找卡片（活动会增减，位置不固定），先回到顶部，找不到就往下滑；卡片没红点就不进"""
+    def open_event_card(self, card, check, need_dot=True):
+        """活动汇总里找卡片（活动会增减，位置不固定），先回到顶部，找不到就往下滑；卡片没红点就不进（need_dot=False 时照样进）"""
         self.list_to_top()
         for _ in range(3):
             self.device.screenshot()
             if self.find(card, LIST_REGION, similarity=0.8):
-                if not self.card_dot(card):
+                if need_dot and not self.card_dot(card):
                     logger.info(f'{card} 没有红点，跳过')
                     return False
                 return self.ui_click(card, check_button=check, offset=(10, 10), retry_wait=3, timeout=10,
@@ -219,12 +219,20 @@ class DailyReward(UI):
         秘宝大作战「命运探索1次」还是「前往」时：前往 → 大地图右下「探索」（不点「探索10次」）
         → 确认消耗 1 枚命运果实 → 返回（地图返回直接回家园）。
         """
+        # 能领能量的任务排在最前面，可领的多时这一行会被挤出第一屏（10-31 有 5 条可领，没找到就跳过了），往下滑着找
         self.list_to_top(start=650, end=1150)
-        self.device.screenshot()
-        if not self.find(FATE_ROW, (0, 480, 720, 1170), similarity=0.85):
+        for _ in range(4):
+            self.device.screenshot()
+            if self.find(FATE_ROW, (0, 480, 720, 1130), similarity=0.85):
+                break
+            self.device.swipe((360, 900), (360, 600), duration=600, name='LIST_DOWN')
+            time.sleep(1)
+        else:
+            logger.info('秘宝大作战里没找到「命运探索1次」')
             return False
         cy = (FATE_ROW.button[1] + FATE_ROW.button[3]) // 2
         if not GOTO_TEXT.match_at(self.device.image, (560, cy, 624, cy + 30), offset=8, similarity=0.85):
+            logger.info('命运探索今天已经做过')
             return False
         logger.info('命运探索：前往大地图')
         self.device.click(ClickArea('FATE_GOTO', (545, cy - 5, 640, cy + 35)))
@@ -238,7 +246,8 @@ class DailyReward(UI):
         return True
 
     def event_mibao(self):
-        if not self.open_event_card(EVENT_MIBAO, MIBAO_CHECK):
+        # 「命运探索1次」没做时卡片不一定有红点（10-31 没红点就跳过了），开着命运探索就照样进去看
+        if not self.open_event_card(EVENT_MIBAO, MIBAO_CHECK, need_dot=not self.config.DailyReward_Fate):
             return
         if self.config.DailyReward_Fate and self.fate_explore():
             # 地图返回直接回家园，重新进精彩活动 → 秘宝大作战领能量
@@ -276,7 +285,8 @@ class DailyReward(UI):
     def events(self):
         logger.hr('Event rewards', level=2)
         self.ensure_home()
-        if not self.red_dot(DOT_HOME_EVENT, screenshot=True):
+        fate = self.config.DailyReward_Mibao and self.config.DailyReward_Fate
+        if not self.red_dot(DOT_HOME_EVENT, screenshot=True) and not fate:
             logger.info('精彩活动没有红点，跳过')
             return
         if not self.ui_click(EVENT_ENTRY, check_button=EVENT_CHECK, offset=(10, 10), retry_wait=3, timeout=15):

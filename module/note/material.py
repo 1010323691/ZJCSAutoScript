@@ -1,7 +1,7 @@
 import re
 import time
 
-import numpy as np
+import cv2
 
 from module.base.button import ClickArea
 from module.base.utils import crop
@@ -20,8 +20,9 @@ MINUS = [ClickArea(f'MATERIAL_MINUS_{i + 1}', (454, y - 18, 490, y + 18)) for i,
 COUNT_BUTTONS = {1: MATERIAL_COUNT_1, 4: MATERIAL_COUNT_4}
 # 已有识别素材的总价；配置的预期花费不在这里就不买
 COST_BUTTONS = {240: MATERIAL_COST_240, 1280: MATERIAL_COST_1280}
-# 黄金矿洞里矿石血条的位置；每次开采成功血条都会变（挖碎后重新长出来也算变）
-MINE_HP_REGION = (333, 771, 573, 791)
+# 黄金矿洞开采按钮下面的镐子数量；挖成一下就少 1。
+# 以前看矿石血条，10-31 血条变了但游戏只算了 9 次（矿石重新长出来时血条自己也在变）
+MINE_PICK_REGION = (370, 955, 442, 985)
 
 
 class MaterialRealm(UI):
@@ -80,7 +81,7 @@ class MaterialRealm(UI):
     def mine(self, times):
         """
         黄金矿洞开采 times 次（完成「探索 N 次素材秘境」类任务）。「快捷开采」必须是关的，不是关就不挖。
-        矿石被挖碎重新长出来的动画期间点击不生效，所以每点一下都看血条有没有变化，没变就补点。
+        矿石被挖碎重新长出来的动画期间点击不生效，所以每点一下都看镐子数量有没有变化，没变就补点。
         """
         if times <= 0:
             return True
@@ -97,15 +98,19 @@ class MaterialRealm(UI):
         for _ in range(times * 3):
             if done >= times:
                 break
-            before = crop(self.device.image, MINE_HP_REGION).astype(int)
+            before = crop(self.device.image, MINE_PICK_REGION)
             self.device.click(MINE_BUTTON)
             self.device.click_record.clear()
-            time.sleep(1.5)
-            self.device.screenshot()
-            if np.mean(np.abs(crop(self.device.image, MINE_HP_REGION).astype(int) - before)) > 3:
-                done += 1
+            # 数字有时晚一点才变，最多等 3 秒
+            for _ in range(6):
+                time.sleep(0.5)
+                self.device.screenshot()
+                after = crop(self.device.image, MINE_PICK_REGION)
+                if cv2.matchTemplate(after, before, cv2.TM_CCOEFF_NORMED)[0][0] < 0.95:
+                    done += 1
+                    break
             else:
-                logger.info('这一下没有生效，补点')
+                logger.info('镐子数量没变，这一下没有生效，补点')
         logger.info(f'开采 {done}/{times} 次')
         self.ui_click(BACK_ARROW, check_button=PAGE_MATERIAL, offset=(10, 10), retry_wait=3)
         return done >= times
