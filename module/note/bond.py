@@ -226,10 +226,13 @@ class BondAdventure(UI):
             if self.appear(BOND_COST_100, offset=(10, 10)):
                 # 确认框有弹出动画
                 time.sleep(0.5)
+                # 点之前就记次数：万一点了没认出生效（抛错），宁可多记一次，也不会超过每日上限多花晨星
                 record['RefreshUsed'] += 1
                 self.config.save_state()
                 logger.info(f'花 100 晨星刷新委派（今天第 {record["RefreshUsed"]} 次）')
-                self.device.click(BOND_DIALOG_CONFIRM)
+                # 确认框还在就是这一下没点上（同一个确认框点几下只扣一次），再点
+                self.click_until(BOND_DIALOG_CONFIRM, self.gone(BOND_COST_100, offset=(10, 10)),
+                                 skip_first_screenshot=True)
                 self.wait_map()
                 return True
             if timer.reached():

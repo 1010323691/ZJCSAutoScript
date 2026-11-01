@@ -12,6 +12,10 @@ QTY_BUTTONS = {1: ARENA_QTY_1, 3: ARENA_QTY_3}
 
 
 class Arena(UI):
+    def cancel_buy(self):
+        """购买框没关掉就去点挑战，挑战会被挡住；框还在就再点取消"""
+        self.click_until(ARENA_BUY_CANCEL, self.gone(ARENA_BUY_DIALOG, offset=(10, 10)), skip_first_screenshot=True)
+
     def buy_tickets(self, count):
         """买 count 张挑战券。核对数量显示正好是 count 才点购买"""
         if count <= 0:
@@ -27,7 +31,7 @@ class Arena(UI):
         current = [n for n, button in QTY_BUTTONS.items() if self.appear(button, offset=(3, 3), similarity=0.9)]
         if not current:
             logger.warning('认不出当前购买数量，取消')
-            self.device.click(ARENA_BUY_CANCEL)
+            self.cancel_buy()
             return False
         for _ in range(count - current[0]):
             self.device.click(ARENA_BUY_PLUS)
@@ -36,7 +40,7 @@ class Arena(UI):
         self.device.screenshot()
         if not self.appear(QTY_BUTTONS[count], offset=(3, 3), similarity=0.9):
             logger.warning(f'购买数量不是 {count}，取消')
-            self.device.click(ARENA_BUY_CANCEL)
+            self.cancel_buy()
             return False
         logger.info(f'购买 {count} 张挑战券')
         self.device.click(ARENA_BUY_CONFIRM)

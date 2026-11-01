@@ -71,35 +71,31 @@ class HomeHouse(HomeScene):
         if item is None:
             return False
         logger.info('领取床的经验气泡')
-        self.device.click(item)
+        # 领到了红点就没了；红点还在就是这一下没点上，再点
+        self.click_until(item, lambda: self.find_dot(BUBBLE_DOT_REGION) is None, skip_first_screenshot=True)
         # 升级提示是个半透明横幅，过一会自己消失
         time.sleep(3)
         self.wait_home()
         return True
 
     def bed_speedup(self):
-        """点床打开弹窗：是「今日免费加速」就点，点完弹窗自己关；用过了（「全局加速」）就返回键关掉，不点"""
-        self.device.click(BED)
-        timer = Timer(6).start()
-        while 1:
-            self.device.screenshot()
-            if self.appear(BED_DIALOG, offset=(10, 10)):
-                break
-            if timer.reached():
-                logger.warning('点床后没有出现「床」弹窗')
-                self.wait_home()
-                return False
+        """点床打开弹窗：是「今日免费加速」就点，点完弹窗自己关；用过了（「全局加速」）就点外面关掉，不点"""
+        # 11-01 实测点床被吞过一次（2.5 秒没弹窗），没弹窗就再点
+        self.click_until(BED, self.appeared(BED_DIALOG, offset=(10, 10)))
         # 弹窗有弹出动画
         time.sleep(0.5)
         self.device.screenshot()
         if not self.appear(BED_FREE_SPEEDUP, offset=(10, 10)):
             logger.info('今天的免费加速已经用过')
-            self.device.back()
-            self.wait_home()
+            # 返回键在弹窗动画期间会被吞，点弹窗外面关（11-01 实测能关）
+            self.ui_close_popup(BED_DIALOG, page_home.check_button)
             return False
         logger.info('使用今日免费加速（2 小时）')
-        self.device.click(BED_FREE_SPEEDUP)
-        time.sleep(2)
+        # 用掉后同一位置会变成「全局加速」（禁点）：只在还认得出「今日免费加速」时补点，认不出就停手、点外面关
+        if not self.click_until(BED_FREE_SPEEDUP, self.gone(BED_DIALOG, offset=(10, 10)),
+                                abort=lambda: not self.appear(BED_FREE_SPEEDUP, offset=(10, 10)),
+                                skip_first_screenshot=True):
+            self.ui_close_popup(BED_DIALOG, page_home.check_button)
         self.wait_home()
         return True
 
