@@ -5,6 +5,7 @@ import numpy as np
 
 from module.base.button import ClickArea
 from module.base.utils import crop
+from module.exception import GamePageUnknownError
 from module.home.assets import *
 from module.logger import logger
 from module.ui.assets import BACK_ARROW
@@ -61,7 +62,10 @@ class Cart(HomeScene):
             sim = CART_BUBBLE.match_region(self.device.image, SCENE_REGION, similarity=0.6, scales=BUBBLE_SCALES)
             if sim > 0.6:
                 logger.info(f'找到小推车气泡（相似度 {sim:.2f}）')
-                self.device.click(CART_BUBBLE)
+                # 领到了会弹「获得奖励」、气泡消失；气泡还在就是这一下没点上，再点
+                self.click_until(CART_BUBBLE, lambda: self.reward_popup() or CART_BUBBLE.match_region(
+                    self.device.image, SCENE_REGION, similarity=0.6, scales=BUBBLE_SCALES) <= 0.6,
+                    handle_popups=False, skip_first_screenshot=True)
                 self.wait_reward_popup(page_home)
                 self.leave_unexpected_page()
                 return True
@@ -91,6 +95,22 @@ class CandyTree(HomeScene):
         x, y = int(np.median(xs)) + SCENE_REGION[0], int(np.median(ys)) + SCENE_REGION[1]
         return ClickArea('CANDY_TREE', (x - 10, y - 10, x + 10, y + 10))
 
+    def click_tree(self, tree):
+        """
+        认不出糖果时点树身：有糖果点第一下是收获（糖果消失、没有弹窗），没糖果点了进幻兽结缘卡池。
+        收获和没点上看起来一样（都还在家园），所以一直点到进卡池为止：进了卡池说明树上已经没有糖果，
+        马上左下返回，卡池里什么都不点。卡池打开要一两秒，每下等 5 秒；点 3 下都没进卡池就算失败。
+        """
+        logger.info('没认出糖果，点树身直到进卡池')
+        self.click_until(tree, lambda: not self.ui_page_appear(page_home), retry_wait=5,
+                         handle_popups=False, skip_first_screenshot=True)
+        # 卡池页还在切换动画里，等左下返回键出来
+        self.wait_until_appear(BACK_ARROW, offset=(20, 20), timeout=5)
+        if not self.leave_unexpected_page():
+            raise GamePageUnknownError
+        logger.info('进了幻兽结缘卡池（树上的糖果已收获或本来就没有），已退出')
+        return True
+
     def run(self):
         """
         树上有糖果时点第一下是收获，没有糖果时点树会进幻兽结缘卡池（只看不抽，马上退出）。
@@ -103,23 +123,17 @@ class CandyTree(HomeScene):
             sim, button = self.find_candy()
             if sim > 0.7:
                 logger.info(f'找到糖果（相似度 {sim:.2f}）')
-                self.device.click(button)
+                # 收获后糖果消失、没有弹窗；糖果还在就是没点上，再点。离开了家园（进了卡池）就不再点
+                self.click_until(button, lambda: self.find_candy()[0] <= 0.7,
+                                 abort=lambda: not self.ui_page_appear(page_home),
+                                 handle_popups=False, skip_first_screenshot=True)
                 self.wait_reward_popup(page_home, timeout=3)
                 self.leave_unexpected_page()
                 return True
             tree = self.find_tree()
             if tree is None:
                 continue
-            logger.info('没认出糖果，点一下树身')
-            self.device.click(tree)
-            # 卡池页打开要一两秒，等够 5 秒还在家园才算收获了糖果
-            for _ in range(5):
-                time.sleep(1)
-                if self.leave_unexpected_page():
-                    logger.info('进了幻兽结缘卡池，说明树上没有糖果，已退出')
-                    return None
-            logger.info('点树后没有进卡池，糖果已收获')
-            return True
+            return self.click_tree(tree)
         logger.warning('家园场景里没找到糖果树')
         # 没找到树不影响别的任务，不算失败（run 返回 False 会被记成失败）
         return None

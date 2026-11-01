@@ -30,9 +30,7 @@ DOT_SEASON_JM = (200, 990, 255, 1045)       # 赛季活动「晶芒淬炼」
 DOT_JM_TABS = [(170, 435, 235, 480), (400, 435, 455, 480), (625, 435, 680, 480)]
 DOT_JM_BAR = (60, 300, 720, 370)            # 晶芒淬炼顶部积分条
 DOT_MIBAO_TAB = (305, 1170, 350, 1215)      # 秘宝大作战「获取能量」页签
-DOT_MALL_DAILY = (650, 670, 700, 720)       # 商城「每日特惠」卡片
 DOT_MALL_DAILY_GIFT = (100, 330, 175, 385)  # 每日特惠左上「每日赠礼」
-DOT_MALL_PASS = (650, 180, 700, 230)        # 商城「巡礼之证」卡片
 DOT_MALL_CARD_TAB = (445, 1160, 495, 1210)  # 商城底部「月卡」页签
 DOT_PASS_GOAL_TAB = (665, 1170, 715, 1218)  # 巡礼之证底部「巡礼目标」页签
 DOT_PASS_GOALS = [(185, 1070, 230, 1115), (400, 1070, 445, 1115), (612, 1070, 660, 1115)]
@@ -40,6 +38,15 @@ DOT_PASS_LEVEL = (130, 340, 350, 1060)      # 巡礼之证左列（免费线）�
 DOT_TASK_DAILY_TAB = (230, 1170, 275, 1215)
 DOT_TASK_COMMISSION_TAB = (450, 1170, 495, 1215)
 DOT_FRIEND_HEART = (360, 1055, 410, 1100)
+# 页签选中时变色：取页签里文字左边的一小块看平均颜色（11-01 实测）。切页签要认出变色才算切过去，
+# 没切过去就会在旧页签上领、按另一页的位置点
+JM_TAB_AREAS = [(35, 470, 70, 485), (260, 470, 295, 485), (485, 470, 520, 485)]
+JM_TAB_ON = (198, 224, 99)          # 晶芒淬炼页签选中：黄绿底（没选中蓝底 90,131,188）
+PASS_TAB_MAIN_AREA = (205, 1210, 225, 1228)
+PASS_TAB_GOAL_AREA = (475, 1210, 495, 1228)
+PASS_TAB_ON = (206, 207, 106)       # 巡礼之证底部页签选中：黄底（没选中黑底 33,32,33）
+PASS_GOAL_AREAS = [(50, 1108, 70, 1124), (270, 1108, 290, 1124), (490, 1108, 510, 1124)]
+PASS_GOAL_ON = (33, 32, 33)         # 巡礼目标的日/周/本期页签选中：黑底（没选中浅灰 222,227,220）
 
 
 class DailyReward(UI):
@@ -157,7 +164,10 @@ class DailyReward(UI):
 
     # ---------------- 精彩活动 ----------------
     def open_event_card(self, card, check, need_dot=True):
-        """活动汇总里找卡片（活动会增减，位置不固定），先回到顶部，找不到就往下滑；卡片没红点就不进（need_dot=False 时照样进）"""
+        """
+        精彩活动汇总、商城卡片列表里按标题找卡片（卡片会增减，位置不固定），先回到顶部，找不到就往下滑；
+        卡片没红点就不进（need_dot=False 时照样进）
+        """
         self.list_to_top()
         for _ in range(3):
             self.device.screenshot()
@@ -169,7 +179,7 @@ class DailyReward(UI):
                                      skip_first_screenshot=True)
             self.device.swipe((360, 900), (360, 450), duration=600, name='LIST_DOWN')
             time.sleep(1)
-        logger.info(f'活动汇总里没有 {card}（活动可能已结束）')
+        logger.info(f'列表里没有 {card}（活动可能已结束）')
         return False
 
     def back_to(self, check, timeout=15):
@@ -208,7 +218,9 @@ class DailyReward(UI):
         self.device.screenshot()
         if self.find(SIGNIN_CLAIM, (30, 240, 690, 1150), similarity=0.8):
             logger.info('领取每日签到')
-            self.device.click(SIGNIN_CLAIM)
+            # 「领取」小标签还在、也没弹奖励，说明这一下没点上
+            self.click_until(SIGNIN_CLAIM, handle_popups=False, success=lambda: (
+                self.reward_popup() or not self.find(SIGNIN_CLAIM, (30, 240, 690, 1150), similarity=0.8)))
             self.close_reward_popup(SIGNIN_CHECK)
         else:
             logger.info('今天已经签到过')
@@ -265,11 +277,12 @@ class DailyReward(UI):
         if not self.open_event_card(EVENT_SEASON, SEASON_CHECK):
             return
         if self.red_dot(DOT_SEASON_JM, screenshot=True)                 and self.ui_click(SEASON_JM, check_button=JM_CHECK, offset=(10, 10), retry_wait=3, timeout=10):
-            for tab, dot in zip([JM_TAB_1, JM_TAB_2, JM_TAB_3], DOT_JM_TABS):
+            for tab, dot, area in zip([JM_TAB_1, JM_TAB_2, JM_TAB_3], DOT_JM_TABS, JM_TAB_AREAS):
                 if not self.red_dot(dot, screenshot=True):
                     continue
-                self.device.click(tab)
-                time.sleep(1.5)
+                # 已经选中就不点（进来默认是第 1 个）
+                self.click_until(tab, self.color_is(area, JM_TAB_ON))
+                time.sleep(1)
                 self.list_to_top(start=650, end=1150)
                 self.claim_all(JM_CHECK, region=(0, 520, 720, 1170))
             # 顶部积分条：达到的档位上有红点，点奖励图标（领完任务积分可能刚够）
@@ -332,14 +345,14 @@ class DailyReward(UI):
             if self.wait_any([MALL_CHECK]) is None:
                 raise GamePageUnknownError
         # 每日特惠 → 左上「每日赠礼」
-        if self.red_dot(DOT_MALL_DAILY, screenshot=True) and self.ui_click(
-                MALL_DAILY_CARD, check_button=MALL_DAILY_CHECK, offset=(20, 20), retry_wait=3, timeout=10):
+        if self.open_event_card(MALL_DAILY_CARD, MALL_DAILY_CHECK):
             if self.red_dot(DOT_MALL_DAILY_GIFT, screenshot=True):
                 logger.info('领取每日赠礼')
-                self.device.click(MALL_DAILY_GIFT)
+                self.click_until(MALL_DAILY_GIFT, handle_popups=False, success=lambda: (
+                    self.reward_popup() or not self.red_dot(DOT_MALL_DAILY_GIFT)))
                 self.close_reward_popup(MALL_DAILY_CHECK)
             self.back_to(MALL_CHECK)
-        if self.config.DailyReward_Pass and self.red_dot(DOT_MALL_PASS, screenshot=True):
+        if self.config.DailyReward_Pass:
             self.mall_pass()
         # 月卡页：只在月卡卡片的按钮范围里找「领取」，避开下面 68 元的七日祈愿
         if self.red_dot(DOT_MALL_CARD_TAB, screenshot=True) and self.ui_click(
@@ -352,20 +365,22 @@ class DailyReward(UI):
         巡礼之证：先领「巡礼目标」三组任务的经验，再领「巡礼之证」页左列免费等级奖励。
         右列（女神赐福）、「购买等级」「68元解锁赐福」都是付费的，绝不点。
         """
-        if not self.ui_click(MALL_PASS_CARD, check_button=PASS_CHECK, offset=(10, 10), retry_wait=3, timeout=10):
+        if not self.open_event_card(MALL_PASS_CARD, PASS_CHECK):
             return
         if self.red_dot(DOT_PASS_GOAL_TAB, screenshot=True):
-            self.device.click(PASS_TAB_GOAL)
-            time.sleep(1.5)
-            for tab, dot in zip([PASS_GOAL_DAILY, PASS_GOAL_WEEKLY, PASS_GOAL_SEASON], DOT_PASS_GOALS):
+            self.click_until(PASS_TAB_GOAL, self.color_is(PASS_TAB_GOAL_AREA, PASS_TAB_ON))
+            time.sleep(1)
+            for tab, dot, area in zip([PASS_GOAL_DAILY, PASS_GOAL_WEEKLY, PASS_GOAL_SEASON], DOT_PASS_GOALS,
+                                      PASS_GOAL_AREAS):
                 if not self.red_dot(dot, screenshot=True):
                     continue
-                self.device.click(tab)
-                time.sleep(1.5)
+                # 进巡礼目标默认是「每日目标」
+                self.click_until(tab, self.color_is(area, PASS_GOAL_ON))
+                time.sleep(1)
                 self.list_to_top(start=500, end=1050)
                 self.claim_all(PASS_CHECK, region=(0, 330, 720, 1070))
-            self.device.click(PASS_TAB_MAIN)
-            time.sleep(1.5)
+            self.click_until(PASS_TAB_MAIN, self.color_is(PASS_TAB_MAIN_AREA, PASS_TAB_ON))
+            time.sleep(1)
         # 左列可领的等级奖励带红点，点图标（点一个会把已达到的等级一起领完）
         for _ in range(5):
             if not self.red_dot(DOT_PASS_LEVEL, screenshot=True):

@@ -63,8 +63,7 @@ class GeneralShop(ShopUI):
         if target not in DISCOUNT_LEVELS:
             logger.warning(f'折扣配置 {target} 不在 {DISCOUNT_LEVELS} 里，不改滑块')
             return False
-        self.device.click(SHOP_GEAR)
-        if not self.wait_until_appear(DISCOUNT_DIALOG, offset=(10, 10), timeout=6):
+        if not self.click_until(SHOP_GEAR, self.appeared(DISCOUNT_DIALOG, offset=(10, 10)), raise_error=False):
             return False
         target_index = DISCOUNT_LEVELS.index(target)
         for _ in range(12):
@@ -72,18 +71,26 @@ class GeneralShop(ShopUI):
             self.device.screenshot()
             if DISCOUNT_KNOB.match_region(self.device.image, KNOB_REGION, similarity=0.8) <= 0.8:
                 logger.warning('没认出折扣滑块')
-                self.device.click(DIALOG_CANCEL)
+                self.close_discount(DIALOG_CANCEL)
                 return False
             x = (DISCOUNT_KNOB.button[0] + DISCOUNT_KNOB.button[2]) / 2
             index = min(max(int(round((x - KNOB_X0) / KNOB_STEP)), 0), len(DISCOUNT_LEVELS) - 1)
             logger.attr('Discount', DISCOUNT_LEVELS[index])
             if index == target_index:
-                self.ui_click(DIALOG_CONFIRM, check_button=PAGE_SHOP, offset=(10, 10), timeout=10,
-                              skip_first_screenshot=True)
+                self.close_discount(DIALOG_CONFIRM)
                 return True
             self.device.click(DISCOUNT_PLUS if index < target_index else DISCOUNT_MINUS)
-        self.device.click(DIALOG_CANCEL)
+        self.close_discount(DIALOG_CANCEL)
         return False
+
+    def close_discount(self, button):
+        """点折扣框的确认或取消，直到框关掉；框没关就点一键购买会点在框上"""
+        self.click_until(button, self.gone(DISCOUNT_DIALOG, offset=(10, 10)))
+
+    def goto_general_tab(self):
+        """切到杂货页签，认出「杂货」选中才算；没切过去就在宝库页按一键购买的位置点，会点到商品"""
+        self.click_until(SHOP_TAB_GENERAL,
+                         lambda: GENERAL_TAB_ON.match_region(self.device.image, TAB_BAR, similarity=0.85) > 0.85)
 
     def onekey_buy(self):
         """一键购买当前所有符合折扣的限购商品（点了直接买，没有确认框）"""
@@ -134,8 +141,7 @@ class GeneralShop(ShopUI):
     def run(self):
         logger.hr('General shop', level=2)
         self.enter_shop()
-        self.device.click(SHOP_TAB_GENERAL)
-        time.sleep(1)
+        self.goto_general_tab()
         self.set_discount(self.config.GeneralShop_Discount)
         limit = self.config.GeneralShop_RefreshTimes
         limit = 99 if limit < 0 else limit

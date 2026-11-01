@@ -81,8 +81,9 @@ TASK_TAB_DAILY:
   click: [165, 1195, 265, 1240]
 TASK_TAB_COMMISSION:
   click: [385, 1195, 470, 1240]
-MALL_DAILY_CARD:        # 商城「每日特惠」卡片
-  click: [300, 640, 680, 820]
+MALL_DAILY_CARD:        # 商城「每日特惠」卡片标题。卡片会增减、位置会变（11-01 插进两张万圣活动卡），按文字找，红点在标题右上
+  screen: rd_mall
+  area: [475, 697, 662, 742]
 MALL_DAILY_GIFT:        # 每日特惠左上「每日赠礼」
   click: [55, 335, 145, 435]
 MALL_TAB_CARD:          # 商城底部「月卡」页签
@@ -107,8 +108,9 @@ FRIEND_DIALOG_CLOSE:    # 弹窗外空白处
 PASS_CHECK:             # 「巡礼之证」页左上标题（两个页签都有）
   screen: rd_pass
   area: [60, 100, 293, 147]
-MALL_PASS_CARD:         # 商城「巡礼之证」卡片
-  click: [300, 140, 690, 320]
+MALL_PASS_CARD:         # 商城「巡礼之证」卡片标题，同上按文字找（11-01 从第 1 张挪到第 3 张，老位置点进了「万圣夜影」礼包页）
+  screen: rd_mall
+  area: [475, 205, 662, 248]
 PASS_TAB_MAIN:          # 底部「巡礼之证」页签（等级奖励）
   click: [200, 1195, 390, 1240]
 PASS_TAB_GOAL:          # 底部「巡礼目标」页签（任务经验）

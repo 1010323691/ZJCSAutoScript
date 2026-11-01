@@ -5,6 +5,7 @@ import cv2
 
 from module.base.button import ClickArea
 from module.base.utils import crop
+from module.exception import GamePageUnknownError
 from module.logger import logger
 from module.note.assets import *
 from module.ui.assets import BACK_ARROW
@@ -27,7 +28,8 @@ MINE_PICK_REGION = (370, 955, 442, 985)
 
 class MaterialRealm(UI):
     def cancel(self):
-        self.device.click(MATERIAL_CANCEL)
+        # 弹窗还在就是这一下没点上，再点
+        self.click_until(MATERIAL_CANCEL, self.gone(MATERIAL_DIALOG, offset=(10, 10)), skip_first_screenshot=True)
         self.wait_until_appear(PAGE_MATERIAL, offset=(10, 10), timeout=5)
 
     def buy(self):
@@ -73,9 +75,14 @@ class MaterialRealm(UI):
             self.cancel()
             return False
         logger.info(f'组数 {buy_count}，总价 {cost} 钻石，购买')
-        self.device.click(MATERIAL_BUY)
+        # 花钻石：弹窗还开着、总价还是这个数才补点；每下多等一会（5 秒），最多点 2 下，避免卡顿时买两次
+        self.click_until(MATERIAL_BUY, lambda: self.reward_popup() or not self.appear(MATERIAL_DIALOG, offset=(10, 10)),
+                         retry_wait=5, max_clicks=2, handle_popups=False, skip_first_screenshot=True,
+                         abort=lambda: not cost_button.match_at(self.device.image, cost_button.area, offset=5,
+                                                                similarity=0.95))
         self.wait_reward_popup(page_material, timeout=5)
-        self.wait_until_appear(PAGE_MATERIAL, offset=(10, 10), timeout=10)
+        if not self.wait_until_appear(PAGE_MATERIAL, offset=(10, 10), timeout=10):
+            raise GamePageUnknownError
         return True
 
     def mine(self, times):

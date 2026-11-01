@@ -94,12 +94,20 @@ class HolyBeastTrial(MatchActivity):
 
 class TwinShadow(MatchActivity):
     def run(self):
-        """不打无尽模式：匹配前确认「无尽模式」没有选中，认不出就不匹配"""
+        """
+        不打无尽模式：有「无尽模式」这一行时，要认出圆圈是未选中才匹配，认不出就不匹配。
+        有的期数（11-01「欢乐时光」）整行不显示，没有无尽模式可选，照常匹配。
+        """
         logger.hr('Twin shadow', level=2)
         self.device.screenshot()
         if not self.in_match_or_battle():
             self.ui_ensure(page_twin_shadow, skip_first_screenshot=True)
-            if not self.appear(ENDLESS_OFF, offset=(5, 5), similarity=0.9):
+            # 页面刚切过来，等一下下面的选项行
+            time.sleep(1)
+            self.device.screenshot()
+            if not self.appear(ENDLESS_LABEL, offset=(10, 10), similarity=0.85):
+                logger.info('这一期没有「无尽模式」选项，直接匹配')
+            elif not self.appear(ENDLESS_OFF, offset=(5, 5), similarity=0.9):
                 logger.warning('「无尽模式」不是未选中状态，不匹配')
                 return False
         result = self.match_battle(page_twin_shadow)

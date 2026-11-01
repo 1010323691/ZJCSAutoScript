@@ -188,7 +188,7 @@ class GuildDonate(GuildUI):
                     break
                 if timer.reached():
                     logger.warning('没有等到晨星数对得上的确认框，停止')
-                    self.device.back()
+                    self.ui_close_popup(DONATE_DIALOG, PAGE_GUILD_HALL)
                     return False
         self.device.click_record.clear()
         # 关掉捐赠弹窗。原来按返回键，10-31 捐完正赶上动画被吞掉，弹窗一直开着，下一个任务认不出页面
