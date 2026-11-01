@@ -16,6 +16,8 @@ DISCOUNT_LEVELS = [3, 4, 5, 6, 7, 8, 9, '全部']
 KNOB_X0, KNOB_STEP = 190, 48.6
 KNOB_REGION = (160, 560, 560, 615)
 MERCHANT_REGION = (0, 600, 640, 960)
+# 底部页签栏（返回键右边）。「特卖」时有时无，页签 3 个或 4 个，位置不固定，按文字在整条栏里找
+TAB_BAR = (150, 1190, 705, 1252)
 
 
 class ShopUI(HomeScene):
@@ -164,6 +166,24 @@ class Vault(ShopUI):
     点价格直接买，没有确认框（10-30 实测：免费、100 钻、50 钻、30 钻都是）。
     """
 
+    def vault_tab_on(self):
+        return VAULT_TAB_ON.match_region(self.device.image, TAB_BAR, similarity=0.85) > 0.85
+
+    def goto_vault_tab(self, timeout=10):
+        """切到宝库页签：在页签栏里找「宝库」两个字点它（不按固定位置，「特卖」出不出来都能点对）"""
+        timer = Timer(timeout).start()
+        while 1:
+            self.device.screenshot()
+            if self.vault_tab_on():
+                return
+            if timer.reached():
+                logger.warning('切不到宝库页签')
+                raise GamePageUnknownError
+            if VAULT_TAB_OFF.match_region(self.device.image, TAB_BAR, similarity=0.85) > 0.85 \
+                    and self.appear_interval_ready(VAULT_TAB_OFF, interval=3):
+                self.device.click(VAULT_TAB_OFF)
+            time.sleep(0.5)
+
     def vault_sold(self, index):
         cx, cy = VAULT_COLS[(index - 1) % 3], VAULT_STAMP_Y[(index - 1) // 3]
         image = crop(self.device.image, (cx - 50, cy - 35, cx + 50, cy + 35))
@@ -175,7 +195,7 @@ class Vault(ShopUI):
         price = ClickArea(f'VAULT_ITEM_{index}', (cx - 40, cy - 15, cx + 40, cy + 15))
         for _ in range(VAULT_MAX_CLICKS):
             self.device.screenshot()
-            if not self.appear(VAULT_TAB_ON, offset=(10, 10)):
+            if not self.vault_tab_on():
                 # 例如钻石不足弹了充值框，不碰，返回并停下
                 logger.warning('点商品后离开了宝库页，返回并停止购买')
                 self.device.back()
@@ -192,9 +212,7 @@ class Vault(ShopUI):
         logger.hr('Vault', level=2)
         items = [int(x) for x in str(self.config.Vault_Items).replace('，', ',').split(',') if x.strip()]
         self.enter_shop()
-        self.device.click(SHOP_TAB_VAULT)
-        if not self.wait_until_appear(VAULT_TAB_ON, offset=(10, 10), timeout=6):
-            raise GamePageUnknownError
+        self.goto_vault_tab()
         time.sleep(1)
         for index in items:
             if not 1 <= index <= 9:
