@@ -5,6 +5,7 @@
 用法：
     .venv\\Scripts\\python.exe gui.py                 # 打开 http://127.0.0.1:22367
     .venv\\Scripts\\python.exe gui.py --port 22368 --config zjcs --no-browser
+    .venv/bin/python gui.py                         # Mac；双击 zjcs.command 也是这个
 """
 import argparse
 import base64
@@ -12,6 +13,7 @@ import datetime
 import json
 import os
 import re
+import signal
 import subprocess
 import sys
 import threading
@@ -21,8 +23,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs
 
 from module.config.config import ARGUMENT_FILE, TASK_ORDER, ZjcsConfig
-from module.device.adb_replace import replace_ldplayer_adb
-from module.device.connection import adb_devices, adb_path, focus_package
+from module.device.connection import IS_MAC, NO_WINDOW, adb_devices, adb_path, focus_package
 from module.logger import LOG_DIR, ROOT, log_file
 from module.notify import send_toast
 from module.runtime import (clear_commands, now_iso, pending_commands, read_history, read_json, read_runtime,
@@ -193,14 +194,19 @@ def start_scheduler():
     if read_runtime(CONFIG_NAME).get('alive') or (SCHEDULER is not None and SCHEDULER.poll() is None):
         return '已经在运行了'
     clear_commands(CONFIG_NAME, 'stop')
+    cmd = [sys.executable, os.path.join(ROOT, 'zjcs.py'), '--config', CONFIG_NAME, '--loop']
+    if os.name != 'nt':
+        # 新会话：关掉终端窗口（SIGHUP）或配置界面，脚本照样跑；它是进程组组长，强制停止时连同 adb 一起结束
+        SCHEDULER = subprocess.Popen(cmd, cwd=ROOT, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                     stderr=subprocess.DEVNULL, start_new_session=True, close_fds=True)
+        return ''
     flags = subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
     # 不接输出（日志已经写文件），也不挂在界面进程下：关掉配置界面，脚本照样跑。
     # 桌面壳（zjcs.exe）用作业对象管着 gui.py，关窗口会结束整个作业；脱离作业，脚本才不会被一起结束。
     # 不在作业里、或作业不允许脱离时 CreateProcess 会拒绝，退回不带这个标志
     for extra in (subprocess.CREATE_BREAKAWAY_FROM_JOB, 0):
         try:
-            SCHEDULER = subprocess.Popen([sys.executable, os.path.join(ROOT, 'zjcs.py'), '--config', CONFIG_NAME, '--loop'],
-                                         cwd=ROOT, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+            SCHEDULER = subprocess.Popen(cmd, cwd=ROOT, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                                          stderr=subprocess.DEVNULL, creationflags=flags | extra, close_fds=True)
             return ''
         except OSError:
@@ -209,15 +215,33 @@ def start_scheduler():
     return ''
 
 
+def kill_tree(pid):
+    """结束进程；它是进程组组长（start_scheduler 开的）时连同组里的 adb 子进程一起结束"""
+    try:
+        if os.getpgid(pid) == pid:
+            os.killpg(pid, signal.SIGKILL)
+        else:
+            os.kill(pid, signal.SIGKILL)
+    except (ProcessLookupError, PermissionError):
+        pass
+    if SCHEDULER is not None and SCHEDULER.pid == pid:
+        try:
+            SCHEDULER.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            pass
+
+
 def force_stop():
     runtime = read_runtime(CONFIG_NAME)
     pids = {runtime.get('pid')} if runtime.get('alive') else set()
     if SCHEDULER is not None and SCHEDULER.poll() is None:
         pids.add(SCHEDULER.pid)
     for pid in filter(None, pids):
+        if os.name != 'nt':
+            kill_tree(pid)
+            continue
         # /T 连同它开的 adb 子进程一起结束
-        subprocess.run(['taskkill', '/PID', str(pid), '/T', '/F'], capture_output=True,
-                       creationflags=subprocess.CREATE_NO_WINDOW)
+        subprocess.run(['taskkill', '/PID', str(pid), '/T', '/F'], capture_output=True, creationflags=NO_WINDOW)
     clear_commands(CONFIG_NAME, 'stop')
     data = read_json(runtime_file(CONFIG_NAME), {}) or {}
     if data.get('state') != 'stopped':
@@ -230,7 +254,7 @@ def force_stop():
 # ---------- 设备 ----------
 def adb_run(config, args, timeout=10):
     return subprocess.run([adb_path(config.Device_AdbExecutable)] + args, capture_output=True, timeout=timeout,
-                          creationflags=subprocess.CREATE_NO_WINDOW)
+                          creationflags=NO_WINDOW)
 
 
 def screencap(config):
@@ -265,7 +289,7 @@ def check_device():
         return ok
 
     try:
-        devices = adb_devices(adb_path(config.Device_AdbExecutable))
+        devices = adb_devices(adb_path(config.Device_AdbExecutable), serial)
     except (OSError, subprocess.TimeoutExpired) as e:
         step('adb 能用', False, f'运行不了 {config.Device_AdbExecutable}：{e}')
         return {'ok': False, 'steps': steps}
@@ -362,7 +386,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == '/api/config':
             with LOCK:
                 config = ZjcsConfig(CONFIG_NAME)
-            return self.send_json(200, {'data': config.data, 'argument': config.argument, 'file': config.file})
+            return self.send_json(200, {'data': config.data, 'argument': config.argument, 'file': config.file,
+                                        'mac': IS_MAC})
         if path == '/api/status':
             return self.send_json(200, status())
         if path == '/api/log':
@@ -463,7 +488,9 @@ def main():
     args = parser.parse_args()
     CONFIG_NAME, PORT = args.config, args.port
     config = current_config()
-    if config.Device_ReplaceAdb:
+    # 只换雷电的 adb；Mac 上用 BlueStacks 自带的 hd-adb，没有可换的（adb_replace 依赖 Windows 注册表）
+    if config.Device_ReplaceAdb and os.name == 'nt':
+        from module.device.adb_replace import replace_ldplayer_adb
         try:
             replace_ldplayer_adb(CONFIG_NAME, [adb_path(config.Device_AdbExecutable)])
         except Exception as e:

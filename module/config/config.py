@@ -1,6 +1,7 @@
 import datetime
 import json
 import os
+import sys
 
 import yaml
 
@@ -35,9 +36,17 @@ ARGUMENT_FILE = os.path.join(ROOT, 'module', 'config', 'argument.yaml')
 
 
 def load_argument():
-    """读参数定义表 argument.yaml"""
+    """读参数定义表 argument.yaml。参数里写了 mac: 的，在 Mac 上用它覆盖默认值和说明"""
     with open(ARGUMENT_FILE, 'r', encoding='utf-8') as f:
-        return yaml.safe_load(f)
+        argument = yaml.safe_load(f)
+    for args in argument.values():
+        for key, define in args.items():
+            if key.startswith('_'):
+                continue
+            mac = define.pop('mac', None)
+            if mac and sys.platform == 'darwin':
+                define.update(mac)
+    return argument
 
 
 class ZjcsConfig:

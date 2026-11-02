@@ -23,6 +23,9 @@ class Screenshot(Connection):
     def screenshot_adb_raw(self):
         """screencap 原始像素，比 png 少一次设备端压缩"""
         data = self.adb_command(['exec-out', 'screencap'], timeout=15)
+        if not data:
+            # 设备掉线时 adb 什么都不输出，按普通失败重试（会先尝试重连），不当成分辨率错误停机
+            raise ConnectionError('截图没有数据，设备可能掉线了')
         size = WIDTH * HEIGHT * 4
         header = len(data) - size
         if header not in (12, 16):
@@ -59,6 +62,7 @@ class Screenshot(Connection):
             except Exception as e:
                 logger.warning(f'截图失败，重试: {e}')
                 time.sleep(2 + retry * 3)
+                self.reconnect()
         else:
             raise ScriptError('连续 5 次截图失败')
         self.image = image

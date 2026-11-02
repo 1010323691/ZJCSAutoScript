@@ -9,13 +9,17 @@
 #     name: 界面显示名
 #     help: 说明（可选）
 #     option: select 的选项（可选）
+#     mac: Mac 上不同的 value / help（可选），按 sys.platform 换上
 
 Device:
   _name: 设备
   _menu: 设置
-  Serial: {type: input, value: emulator-5554, name: 设备序列号, help: 雷电第 1 个实例是 emulator-5554，第 2 个是 emulator-5556，依次加 2}
-  AdbExecutable: {type: input, value: 'bin\adb\adb.exe', name: adb 路径, help: 默认用脚本自带的 adb（bin\adb\adb.exe，相对路径按脚本目录算），一般不用改}
-  ReplaceAdb: {type: checkbox, value: true, name: 替换雷电的 adb, help: 打开配置界面时把雷电目录里的 adb.exe 换成脚本自带的那份（原文件改名 adb.exe.bak），先结束所有 adb 进程；版本一致就不会互相断线。和 ALAS 的 ReplaceAdb 一样}
+  Serial: {type: input, value: emulator-5554, name: 设备序列号, help: 雷电第 1 个实例是 emulator-5554，第 2 个是 emulator-5556，依次加 2,
+           mac: {value: '127.0.0.1:5555', help: 填 127.0.0.1:端口，端口是 BlueStacks 设置里 ADB 那一项显示的地址（第 1 个实例 5555，第 2 个 5565，依次加 10）}}
+  AdbExecutable: {type: input, value: 'bin\adb\adb.exe', name: adb 路径, help: 默认用脚本自带的 adb（bin\adb\adb.exe，相对路径按脚本目录算），一般不用改,
+                  mac: {value: /Applications/BlueStacks.app/Contents/MacOS/hd-adb, help: BlueStacks 自带的 hd-adb，一般不用改}}
+  ReplaceAdb: {type: checkbox, value: true, name: 替换雷电的 adb, help: 打开配置界面时把雷电目录里的 adb.exe 换成脚本自带的那份（原文件改名 adb.exe.bak），先结束所有 adb 进程；版本一致就不会互相断线。和 ALAS 的 ReplaceAdb 一样,
+               mac: {help: Mac 上不替换，直接用 BlueStacks 自带的 hd-adb}}
   PackageName: {type: input, value: com.leiting.zjcs, name: 游戏包名}
   ScreenshotMethod: {type: select, value: adb_raw, option: [adb_raw, adb_png], name: 截图方式}
   ScreenshotInterval: {type: float, value: 0.3, name: 截图最短间隔（秒）}
@@ -30,7 +34,8 @@ Scheduler:
 Notify:
   _name: 通知
   _menu: 设置
-  Enable: {type: checkbox, value: true, name: 发系统通知, help: Windows 右下角弹出，也会留在通知中心}
+  Enable: {type: checkbox, value: true, name: 发系统通知, help: Windows 右下角弹出，也会留在通知中心,
+           mac: {help: Mac 右上角弹出，也会留在通知中心}}
   Human: {type: checkbox, value: true, name: 需要人工处理时, help: 连续失败到上限、设备不在线、脚本出错而停下时}
   Finish: {type: checkbox, value: false, name: 今天的任务都跑完时, help: 常驻运行时，到期的任务全部做完、开始等下一次刷新时发一条汇总}
 

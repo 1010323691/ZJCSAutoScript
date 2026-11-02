@@ -1,9 +1,12 @@
 """
-Windows 系统通知（右下角弹出、进通知中心）。用系统自带的 PowerShell 调 WinRT，不装额外的库。
-标题和正文通过环境变量传给 PowerShell，不拼进命令行，避免引号、换行把命令弄坏。
+系统通知，不装额外的库：
+- Windows：右下角弹出、进通知中心。用系统自带的 PowerShell 调 WinRT。
+  标题和正文通过环境变量传给 PowerShell，不拼进命令行，避免引号、换行把命令弄坏。
+- Mac：右上角弹出、进通知中心。用系统自带的 osascript，标题和正文作为脚本参数传，同样不拼进脚本。
 """
 import os
 import subprocess
+import sys
 
 from module.logger import logger
 
@@ -21,12 +24,27 @@ $toast = [Windows.UI.Notifications.ToastNotification]::new($xml)
 [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier($env:ZJCS_APP).Show($toast)
 '''
 
+MAC_SCRIPT = '''
+on run argv
+    display notification (item 2 of argv) with title (item 1 of argv)
+end run
+'''
+
 
 def send_toast(title, body):
     """
     Returns:
         str: 失败原因，成功返回空字符串
     """
+    if sys.platform == 'darwin':
+        cmd = ['osascript', '-e', MAC_SCRIPT, str(title), str(body)]
+        try:
+            result = subprocess.run(cmd, capture_output=True, timeout=20)
+        except (OSError, subprocess.TimeoutExpired) as e:
+            return str(e)
+        if result.returncode != 0:
+            return result.stderr.decode('utf-8', errors='ignore').strip()[-300:] or f'exit {result.returncode}'
+        return ''
     env = dict(os.environ, ZJCS_TITLE=str(title), ZJCS_BODY=str(body), ZJCS_APP=APP_ID)
     try:
         result = subprocess.run(['powershell', '-NoProfile', '-NonInteractive', '-Command', SCRIPT], env=env,

@@ -9,6 +9,7 @@ import ctypes
 import datetime
 import json
 import os
+import subprocess
 import time
 import uuid
 
@@ -67,6 +68,8 @@ def pid_alive(pid):
     """进程还在、而且是 python（防止 pid 被别的程序复用）"""
     if not pid:
         return False
+    if os.name != 'nt':
+        return _pid_alive_posix(int(pid))
     kernel32 = ctypes.windll.kernel32
     handle = kernel32.OpenProcess(0x1000, False, int(pid))  # PROCESS_QUERY_LIMITED_INFORMATION
     if not handle:
@@ -82,6 +85,21 @@ def pid_alive(pid):
         return True
     finally:
         kernel32.CloseHandle(handle)
+
+
+def _pid_alive_posix(pid):
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        pass
+    # 已经退出、还没被父进程（配置界面）回收的僵尸进程也算没了
+    result = subprocess.run(['ps', '-o', 'stat=,comm=', '-p', str(pid)], capture_output=True, text=True)
+    parts = result.stdout.split(None, 1)
+    if len(parts) < 2 or parts[0].startswith('Z'):
+        return False
+    return 'python' in os.path.basename(parts[1].strip()).lower()
 
 
 def read_runtime(config_name):
