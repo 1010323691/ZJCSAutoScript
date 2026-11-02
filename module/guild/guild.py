@@ -2,8 +2,6 @@ import datetime
 import re
 import time
 
-import cv2
-
 from module.activity.assets import REWARD_BADGE
 from module.base.button import ClickArea
 from module.base.timer import Timer
@@ -12,7 +10,7 @@ from module.guild.assets import *
 from module.logger import logger
 from module.ocr.ocr import ocr_lines, ocr_single_line
 from module.ui.assets import BACK_ARROW, BATTLE_RESULT_CLOSE, GET_REWARD_CHECK
-from module.ui.page import page_guild, page_guild_activity, page_guild_hall, page_guild_raid
+from module.ui.page import page_guild, page_guild_activity, page_guild_hall, page_guild_raid, page_home
 from module.ui.ui import UI
 
 # 公会场景里建筑标签可能出现的范围（避开顶部公会名、底部聊天框）
@@ -200,8 +198,9 @@ class GuildDonate(GuildUI):
 GUILD_WAR_WEEKDAYS = (0, 2, 4)
 GUILD_WAR_OPEN = datetime.time(11, 0)
 GUILD_WAR_CLOSE = datetime.time(23, 0)
+# 家园左上角头像下的自身战力「⚔ 22.3亿」（11-02 实测，整数时显示「22亿」）。不在对战地图上找自己：要往下滑着找，常常找不到
+HOME_POWER_AREA = (150, 72, 265, 106)
 # 对战地图两列：左边我方、右边敌方，两列一起滚动。y < 195 是顶部公会名和比分
-OWN_COLUMN = (30, 195, 290, 1200)
 ENEMY_COLUMN = (440, 195, 690, 1200)
 # 战力行要完整在画面里才认，被上下边缘切到的会认错（10-30 实测 20.2 认成 20.21）
 POWER_Y_RANGE = (305, 1150)
@@ -210,8 +209,6 @@ POWER_RE = re.compile(r'(\d+(?:\.\d+)?)亿')
 NAME_DY = -27
 STAMP_DY = (-110, -50)
 AVATAR_DY = -80
-# 自己那一条名字是黄色的，其他人是白色。黄色像素占比：自己 0.16～0.25，别人 ≤ 0.01
-OWN_YELLOW_RATIO = 0.05
 SCROLL_LIMIT = 15
 
 
@@ -252,10 +249,6 @@ class GuildWar(GuildUI):
         Returns:
             bool: 没有「进入对战」按钮（没开放）返回 False
         """
-        self.device.screenshot()
-        if self.appear(PAGE_GUILD_WAR_MAP, offset=(10, 10)):
-            # 上次中断时停在地图中间，重进一次回到最上面
-            return self.reenter_map()
         self.ui_goto_guild_activity()
         self.device.click(GUILD_WAR_CARD)
         if not self.wait_until_appear(GUILD_WAR_ENTER, offset=(10, 10), timeout=8):
@@ -264,14 +257,6 @@ class GuildWar(GuildUI):
             return False
         return self.ui_click(GUILD_WAR_ENTER, check_button=PAGE_GUILD_WAR_MAP, offset=(10, 10), timeout=15,
                              skip_first_screenshot=True)
-
-    def reenter_map(self):
-        """退回公会战页面再点「进入对战」，地图回到最上面。比一次次往上拖快"""
-        if self.ui_click(BACK_ARROW, check_button=GUILD_WAR_ENTER, offset=(10, 10), retry_wait=3, timeout=15):
-            return self.ui_click(GUILD_WAR_ENTER, check_button=PAGE_GUILD_WAR_MAP, offset=(10, 10), timeout=15,
-                                 skip_first_screenshot=True)
-        logger.warning('从地图返回后没有看到「进入对战」')
-        return False
 
     def leave_war(self):
         """左下返回，回到远征之门"""
@@ -313,13 +298,6 @@ class GuildWar(GuildUI):
             members.append((y, name, power, stamp))
         return members
 
-    def is_own(self, y):
-        """左列这一条是不是自己（名字是黄色的）"""
-        x1 = OWN_COLUMN[0]
-        hsv = cv2.cvtColor(self.device.image[y - 42:y - 22, x1 + 90:x1 + 190], cv2.COLOR_RGB2HSV)
-        yellow = (hsv[..., 0] >= 18) & (hsv[..., 0] <= 35) & (hsv[..., 1] >= 90) & (hsv[..., 2] >= 170)
-        return yellow.mean() > OWN_YELLOW_RATIO
-
     def map_signature(self):
         """右列文字和位置。头像有火焰动画，整张图比较判断不了有没有滚动，只看文字"""
         return [(y, text) for _, y, text, _ in ocr_lines(self.device.image, ENEMY_COLUMN)]
@@ -341,28 +319,28 @@ class GuildWar(GuildUI):
         self.device.screenshot()
         return not self.same_signature(before, self.map_signature())
 
-    def get_own_power(self, limit_ratio):
+    def get_own_power(self):
         """
-        从最上面往下找左列名字是黄色的那一条，顺便记下路过的敌方。
+        家园左上角读自身战力（用户 11-02：主界面就有自己的战力，不要在对战地图里找，成功率太低）。
+        上次中断时停在对战地图上，先退回远征之门再回家园：对战地图不在页面跳转表里
 
         Returns:
-            tuple: (自身战力, 已经滑过去的敌方里有没有能打的)，没找到自己返回 (None, False)
+            float: 单位亿，认不出返回 None
         """
-        passed = {}
-        for _ in range(SCROLL_LIMIT):
-            enemies = self.scan_column(ENEMY_COLUMN)
-            for y, name, power, _ in self.scan_column(OWN_COLUMN):
-                if self.is_own(y):
-                    logger.attr('OwnPower', f'{name} {power}亿')
-                    limit = power * limit_ratio
-                    visible = {e[1] for e in enemies}
-                    missed = [n for n, (p, stamp) in passed.items() if n not in visible and not stamp and p <= limit]
-                    return power, bool(missed)
-            for _, name, power, stamp in enemies:
-                passed[name] = (power, stamp)
-            if not self.scroll_down():
-                break
-        return None, False
+        self.device.screenshot()
+        if self.appear(PAGE_GUILD_WAR_MAP, offset=(10, 10)):
+            self.leave_war()
+        self.ui_ensure(page_home)
+        for _ in range(3):
+            text = ocr_single_line(self.device.image, HOME_POWER_AREA)
+            power = self.parse_power(text)
+            if power:
+                logger.attr('OwnPower', f'{power}亿')
+                return power
+            logger.warning(f'认不出家园的自身战力：{text}')
+            time.sleep(1)
+            self.device.screenshot()
+        return None
 
     def find_target(self, limit):
         """
@@ -438,18 +416,14 @@ class GuildWar(GuildUI):
         logger.hr('Guild war', level=2)
         if not self.check_open_time():
             return None
-        if not self.enter_map():
-            return None
-        own, missed = self.get_own_power(self.config.GuildWar_PowerRatio)
+        own = self.get_own_power()
         if own is None:
-            logger.warning('地图上没找到自己的战力')
             return False
         limit = round(own * self.config.GuildWar_PowerRatio, 2)
         logger.attr('PowerLimit', f'{limit}亿')
-        if missed:
-            logger.info('找自己战力时滑过了能打的对手，重进地图从最上面找')
-            if not self.reenter_map():
-                return False
+        # 进地图默认在最上面，从上往下找
+        if not self.enter_map():
+            return None
         for count in range(1, self.config.GuildWar_Challenges + 1):
             target = self.find_target(limit)
             if target is None:
