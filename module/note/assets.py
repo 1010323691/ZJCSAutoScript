@@ -33,6 +33,7 @@ DUNGEON_RATING_S = Button(name='DUNGEON_RATING_S', area=(325, 195, 395, 300), co
 DUNGEON_CLAIM = Button(name='DUNGEON_CLAIM', area=(420, 1200, 610, 1235), color=(173, 174, 92), button=(360, 1188, 680, 1248), file='./assets/note/DUNGEON_CLAIM.png')
 DUNGEON_CLAIMED = Button(name='DUNGEON_CLAIMED', area=(420, 1200, 610, 1235), color=(124, 124, 123), button=(420, 1200, 610, 1235), file='./assets/note/DUNGEON_CLAIMED.png')
 DUNGEON_CLAIM_CONFIRM = Button(name='DUNGEON_CLAIM_CONFIRM', area=(127, 513, 587, 547), color=(175, 179, 174), button=(373, 707, 613, 767), file='./assets/note/DUNGEON_CLAIM_CONFIRM.png')
+DUNGEON_EXIT_CONFIRM = Button(name='DUNGEON_EXIT_CONFIRM', area=(132, 570, 588, 602), color=(177, 177, 176), button=(373, 707, 613, 767), file='./assets/note/DUNGEON_EXIT_CONFIRM.png')
 DUNGEON_BUY_PLUS = ClickArea(name='DUNGEON_BUY_PLUS', button=(478, 1020, 506, 1048))
 DUNGEON_BUY_DIALOG = Button(name='DUNGEON_BUY_DIALOG', area=(173, 513, 536, 540), color=(150, 154, 149), button=(173, 513, 536, 540), file='./assets/note/DUNGEON_BUY_DIALOG.png')
 DUNGEON_BUY_ADD = ClickArea(name='DUNGEON_BUY_ADD', button=(578, 622, 614, 662))

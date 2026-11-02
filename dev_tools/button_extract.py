@@ -36,14 +36,20 @@ def extract_module(module):
             lines.append(f'{name} = ClickArea(name={name!r}, button={tuple(item["click"])})\n')
             continue
         screen = item['screen']
-        if screen not in screens:
-            screens[screen] = load_image(os.path.join(SCREENS, f'{screen}.png'))
-        image = screens[screen]
         area = tuple(int(v) for v in item['area'])
         button = tuple(int(v) for v in item.get('button', area))
-        color = tuple(int(round(c)) for c in get_color(image, area))
         file = f'./assets/{module}/{name}.png'
-        save_image(crop(image, area), os.path.join(ROOT, file))
+        if screen not in screens:
+            path = os.path.join(SCREENS, f'{screen}.png')
+            screens[screen] = load_image(path) if os.path.exists(path) else None
+        image = screens[screen]
+        if image is None:
+            # 原图只在截它的那台电脑上（dev_tools/screens 不进仓库）：沿用已裁好的模板，平均色从模板算，结果一样
+            template = load_image(os.path.join(ROOT, file))
+            color = tuple(int(round(c)) for c in get_color(template, (0, 0, area[2] - area[0], area[3] - area[1])))
+        else:
+            color = tuple(int(round(c)) for c in get_color(image, area))
+            save_image(crop(image, area), os.path.join(ROOT, file))
         lines.append(f'{name} = Button(name={name!r}, area={area}, color={color}, button={button}, file={file!r})\n')
 
     out = os.path.join(ROOT, 'module', module, 'assets.py')

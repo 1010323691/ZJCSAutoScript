@@ -87,6 +87,10 @@ DUNGEON_CLAIM_CONFIRM:  # 「是否消耗1次领奖次数，领取1次本次副�
   screen: dungeon_claim_confirm
   area: [127, 513, 587, 547]
   button: [373, 707, 613, 767]
+DUNGEON_EXIT_CONFIRM:   # 不领奖从结算页返回时弹「尚未领取日常副本奖励，是否要退出副本?」→ 确定（11-02 实测）
+  screen: dungeon_exit_confirm
+  area: [132, 570, 588, 602]
+  button: [373, 707, 613, 767]
 DUNGEON_BUY_PLUS:       # 详情页「每日领奖次数：x/2」右边的 +
   click: [478, 1020, 506, 1048]
 DUNGEON_BUY_DIALOG:     # 「是否使用晨星购买日常副本领奖次数?」
