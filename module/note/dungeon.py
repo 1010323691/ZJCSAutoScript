@@ -12,8 +12,6 @@ DUNGEON_CARDS = {'最新': DUNGEON_CARD_2, '磐岩斗阵': DUNGEON_CARD_1, '曙�
 # 从高到低试，第一个没有「解锁条件未达成」的就是能打的最高难度
 DIFFICULTY_TABS = [('炼狱', DUNGEON_TAB_HELL), ('噩梦', DUNGEON_TAB_NIGHTMARE),
                    ('困难', DUNGEON_TAB_HARD), ('普通', DUNGEON_TAB_NORMAL)]
-# 不是 S 评级就不领奖（不扣领奖次数）重新匹配，每次任务最多重打这么多场
-RETRY_LIMIT = 3
 
 
 class DailyDungeon(MatchActivity):
@@ -22,7 +20,8 @@ class DailyDungeon(MatchActivity):
         return super().in_match_or_battle() \
             or self.appear(DUNGEON_ROUND, offset=(30, 10)) \
             or self.appear(DUNGEON_RESULT, offset=(20, 20)) \
-            or self.appear(DUNGEON_CLAIM_CONFIRM, offset=(10, 10))
+            or self.appear(DUNGEON_CLAIM_CONFIRM, offset=(10, 10)) \
+            or self.appear(DUNGEON_EXIT_CONFIRM, offset=(10, 10))
 
     def select_highest_difficulty(self):
         for name, tab in DIFFICULTY_TABS:
@@ -83,7 +82,11 @@ class DailyDungeon(MatchActivity):
             time.sleep(0.5)
 
     def leave_result(self, timeout=15):
-        """结算页左下返回。打完一场会回到副本列表页；重新登录后弹出的结算页返回会回到家园"""
+        """
+        结算页左下返回。没领奖时会弹「尚未领取日常副本奖励，是否要退出副本?」，点确定（11-02 实测）。
+        返回后可能落在副本详情页（匹配页）、副本列表页，也可能回到家园（重新登录后弹出的结算页），都算离开，
+        run() 会按当前页面接着进副本
+        """
         timer = Timer(timeout).start()
         while 1:
             self.device.screenshot()
@@ -91,8 +94,15 @@ class DailyDungeon(MatchActivity):
                     or self.ui_page_appear(page_home):
                 return True
             if timer.reached():
-                logger.warning('结算页返回后没有回到副本详情页')
+                logger.warning('结算页返回后没有回到副本页或家园')
                 return False
+            # 确认框盖住结算页（背景变模糊，认不出结算页），先认它
+            if self.appear(DUNGEON_EXIT_CONFIRM, offset=(10, 10), interval=2):
+                logger.info('确认不领奖退出副本')
+                # 确认框有弹出动画
+                time.sleep(0.5)
+                self.device.click(DUNGEON_EXIT_CONFIRM)
+                continue
             if self.appear(DUNGEON_RESULT, offset=(20, 20), interval=3):
                 self.device.click(BACK_ARROW)
                 continue
@@ -108,6 +118,10 @@ class DailyDungeon(MatchActivity):
         self.device.screenshot()
         # 上次点了「领取奖励」还没确认就中断了：确认框开着，背景变暗认不出评级，点领取前已经确认过是 S
         confirming = self.appear(DUNGEON_CLAIM_CONFIRM, offset=(10, 10))
+        # 上次已经决定不领、点了返回，退出确认框还开着：接着退出
+        if self.appear(DUNGEON_EXIT_CONFIRM, offset=(10, 10)):
+            logger.info('评级不是 S，不领奖，确认退出副本')
+            return False if self.leave_result() else None
         if not confirming and not self.appear(DUNGEON_RATING_S, offset=(20, 20)):
             logger.info('评级不是 S，不领奖，返回重新匹配')
             return False if self.leave_result() else None
@@ -138,7 +152,7 @@ class DailyDungeon(MatchActivity):
     def fight(self):
         """匹配打一场并处理结算页，返回值同 handle_result"""
         self.device.screenshot()
-        if not self.appear(DUNGEON_CLAIM_CONFIRM, offset=(10, 10)) \
+        if not self.appear(DUNGEON_CLAIM_CONFIRM, offset=(10, 10)) and not self.appear(DUNGEON_EXIT_CONFIRM, offset=(10, 10)) \
                 and not self.match_battle(page_dungeon_detail, result_check=DUNGEON_RESULT):
             return None
         return self.handle_result()
@@ -146,24 +160,22 @@ class DailyDungeon(MatchActivity):
     def run(self):
         """
         进指定副本 → 选能打的最高难度 → 买 2 次领奖次数（可选）→ 匹配战斗：
-        S 评级才领奖，不是 S 不领、重新匹配（最多重打 3 场），直到「今日领奖次数已耗尽」
+        S 评级才领奖，不是 S 不领、重新匹配，不限场数，直到「今日领奖次数已耗尽」（用户 11-02：一直刷 S 直到次数用完）
         """
         logger.hr('Daily dungeon', level=2)
-        retried = 0
         self.device.screenshot()
         if self.in_match_or_battle():
             # 上次中断时还在战斗或结算页（匹配制，中途退出会坑队友），先把这一场处理完
             logger.info('正在战斗或结算中，先处理完这一场')
-            result = self.fight()
-            if result is None:
+            if self.fight() is None:
                 return False
-            if not result:
-                retried += 1
         if not self.enter_detail():
             return False
         if self.config.DailyDungeon_BuyExtra:
             self.buy_extra()
-        for count in range(1, 11):
+        count = 0
+        while 1:
+            count += 1
             self.device.screenshot()
             if not self.appear(PAGE_DUNGEON_DETAIL, offset=(10, 10)) and not self.enter_detail():
                 return False
@@ -171,12 +183,5 @@ class DailyDungeon(MatchActivity):
                 logger.info('今日领奖次数已耗尽')
                 return True
             logger.info(f'日常副本第 {count} 场')
-            result = self.fight()
-            if result is None:
+            if self.fight() is None:
                 return False
-            if not result:
-                retried += 1
-                if retried > RETRY_LIMIT:
-                    logger.warning(f'已经重打 {RETRY_LIMIT} 场都不是 S，停止')
-                    return False
-        return True
