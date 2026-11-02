@@ -84,6 +84,19 @@
 | 想恢复雷电原来的 adb | 在「设置 → 设备」里关掉「替换雷电的 adb」，再到雷电安装目录把 `adb.exe` 删掉、`adb.exe.bak` 改回 `adb.exe` |
 | 提示端口 22367 被占用 | 关掉占用这个端口的程序（或者上次没关干净的配置服务）后重新打开 |
 
+### Mac（试验中）
+
+Apple Silicon 的 Mac 可以用源码运行，模拟器用 BlueStacks Air，**还没在游戏上实测过**，遇到问题请提 issue。
+
+1. 装好 [uv](https://docs.astral.sh/uv/)，下载本仓库源码，在目录里运行：
+   ```bash
+   uv venv --python 3.11 .venv && uv pip install --python .venv/bin/python -r requirements.txt
+   ```
+2. BlueStacks 里打开 ADB 调试，分辨率选竖屏 720×1280、DPI 320，装好游戏手动登录一次。
+3. 双击 `zjcs.command`，浏览器会打开配置界面。adb 路径默认是 BlueStacks 自带的 `hd-adb`，序列号填 `127.0.0.1:端口`，端口是 BlueStacks 设置里 ADB 那一项显示的（第 1 个实例 5555，第 2 个 5565，依次加 10）。点「检查连接」确认后，用法和 Windows 一样。
+
+Mac 上没有自动更新，用 `git pull` 或重新下载源码更新。
+
 ## 脚本不会做的事
 
 - 不抽卡、不扭蛋、不碰任何付费按钮；主菜单顶部的轮播横幅（会轮到幸运刮刮乐）不点。

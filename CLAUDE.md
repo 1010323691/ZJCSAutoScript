@@ -49,6 +49,18 @@ zjcs.exe（Tauri 2 桌面壳，webapp/src-tauri）
 - `gui.py` 和调度进程（`zjcs.py`）之间不走网络，走 `module/runtime.py` 的文件通道：`config/<名>.runtime.json` 是运行状态（调度进程写），`config/<名>.cmd/*.json` 一条指令一个文件（立即执行、停止，调度进程读完删掉），`log/<名>.history.jsonl` 是运行记录。同一配置只允许一个调度进程（按 runtime.json 里的 pid 判断）。
 - 配置界面是纯原生 JS，没有构建步骤，`gui.py` 每次从磁盘读文件，改完刷新页面就行，不用重新编译 exe。
 
+## Mac
+
+Mac（Apple Silicon）上用源码运行，没有桌面壳、分发包和自动更新，用浏览器打开配置界面。和 Windows 的区别都按 `sys.platform` / `os.name` 分支，Windows 行为不变：
+
+- **环境**：`uv venv --python 3.11 .venv`，再 `uv pip install --python .venv/bin/python -r requirements.txt`（系统自带的 `/usr/bin/python3` 是 3.9，和 Windows 的 3.11 不一致，不用它）。命令里的 `.venv\Scripts\python.exe` 换成 `.venv/bin/python`。
+- **启动**：双击 `zjcs.command`，在终端里跑 `gui.py` 并打开浏览器；配置服务已经在跑就只打开页面。关终端只关配置界面。
+- **模拟器**：BlueStacks Air，adb 用它自带的 `/Applications/BlueStacks.app/Contents/MacOS/hd-adb`，序列号填 `127.0.0.1:<adb 端口>`（第 1 个实例 5555，第 2 个 5565，依次加 10；`bluestacks.conf` 里的 `bst.instance.<实例>.adb_port`）。adb 服务只在启动时扫一遍 `emulator-XXXX`，之后才开的实例不会出现在 `adb devices` 里，所以用地址：`adb_devices()` 发现地址不在线时先 `adb connect`。这两个默认值写在 `argument.yaml` 参数的 `mac:` 里，`load_argument()` 在 Mac 上用它覆盖 `value` / `help`。自带的 `bin/adb/adb.exe` 和「替换雷电的 adb」只在 Windows 上用：`gui.py` 只在 Windows 上导入 `adb_replace`（它依赖 `winreg`），Mac 的设置页也不显示这个开关。
+- **OCR**：仍是 RapidOCR（onnxruntime 有 arm64 包）。onnxruntime 默认开满所有核，公会战一列识别 CPU 近 1000%，会挤占同机模拟器（ALAS 在 Mac 上遇到同样的问题，它限制了 BLAS 线程），所以 Mac 上 `module/ocr/ocr.py` 限制 2 线程：约 280ms、CPU 200%（默认 160ms，单线程 490ms，11-02 实测）。
+- **进程**：调度进程用 `start_new_session=True` 启动（代替 Windows 的脱离作业对象），强制停止用 `killpg` 连同 adb 一起结束（代替 `taskkill /T`）。`pid_alive` 用 `ps` 查，没回收的僵尸进程算已退出。
+- **通知**：`osascript` 的 `display notification`，第一次可能要在「系统设置 → 通知」里允许「脚本编辑器」。
+- **还没验证**：第 3 个实例已经设成 720×1280 竖屏、DPI 320，装好游戏；还没在 Mac 上跑过日常任务。
+
 ## 调度和任务
 
 - `module/config/config.py` 的 `TASK_ORDER` 决定执行顺序；每个任务的下次运行时间、连续失败次数、立即执行标记记在 `config/<名>.state.json`。服务器每天 `Scheduler_ServerUpdate`（北京时间 8:00）刷新，按 `ServerTimezone` 换算成本机时间。立即执行的任务排在队首，关着的任务也能立即执行。
@@ -79,7 +91,7 @@ zjcs.exe（Tauri 2 桌面壳，webapp/src-tauri）
 
 ## 安全约定（不能违反）
 
-- **设备**：本机实例 0（`emulator-5554`）跑着别的游戏和 ALAS，不要碰；本机游戏在 `emulator-5556`（真实配置里写的）。分发版的默认序列号是 5554，所以测试时不要删掉或替换 `config/zjcs.yaml`。adb 默认用自带的 `bin/adb/adb.exe`（从 ALAS 的 adbutils 复制的 29.0.6，和 ALAS 同一份）。`gui.py` 启动时按 `Device_ReplaceAdb` 调 `module/device/adb_replace.py` 替换雷电目录里的 adb：不一致时先结束所有 adb 进程，原文件改名 `.bak`，调度进程在跑时跳过。这会让同机其他用 adb 的程序（本机 ALAS）断开一下，是用户确认过的做法（照搬 ALAS 的 ReplaceAdb）。除此之外不要执行 `adb kill-server` / `start-server`，也不改模拟器窗口尺寸和分辨率。
+- **设备**：本机实例 0（`emulator-5554`）跑着别的游戏和 ALAS，不要碰；本机游戏在 `emulator-5556`（真实配置里写的）。分发版的默认序列号是 5554，所以测试时不要删掉或替换 `config/zjcs.yaml`。adb 默认用自带的 `bin/adb/adb.exe`（从 ALAS 的 adbutils 复制的 29.0.6，和 ALAS 同一份）。`gui.py` 启动时按 `Device_ReplaceAdb` 调 `module/device/adb_replace.py` 替换雷电目录里的 adb：不一致时先结束所有 adb 进程，原文件改名 `.bak`，调度进程在跑时跳过。这会让同机其他用 adb 的程序（本机 ALAS）断开一下，是用户确认过的做法（照搬 ALAS 的 ReplaceAdb）。除此之外不要执行 `adb kill-server` / `start-server`，也不改模拟器窗口尺寸和分辨率。Mac 上 BlueStacks 第 1、2 个实例（`emulator-5554` / `127.0.0.1:5555`、`emulator-5564` / `127.0.0.1:5565`）跑着 ALAS（碧蓝航线），不要碰；游戏在第 3 个实例「BlueStacks Air 03 ZJCS」，`127.0.0.1:5575`。
 - **游戏操作**：绝不抽卡、扭蛋。不点主菜单轮播横幅（会轮到刮刮乐）、付费按钮、羁绊冒险「挑战」、糖果树卡池的「结缘」按钮、「删除已读」、床的「全局加速」、组队邀请。花钻石或晨星的地方都先核对数量或价格，对不上就取消。
 - **不要擅自假设**：游戏机制、界面操作、执行逻辑或配置规则不明确时，先问用户，不要自己决定；只实现用户明确提出的内容。完整禁点清单和每项授权的上限，在私有知识库 01 篇第 3 节。
 - **知识库**：`kb/` 是单独的私有仓库 `1010323691/ZJCSAutoScript-KB`，本仓库 `.gitignore` 排除了它（截图里有账号信息）。改了知识库要进 `kb/` 单独提交、推送。本仓库是公开的，不要把 kb 内容、`dev_tools/screens/`、`config/zjcs.yaml`、日志加进来。

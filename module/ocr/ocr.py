@@ -1,3 +1,5 @@
+import sys
+
 import cv2
 
 from module.base.utils import crop
@@ -12,7 +14,12 @@ def _get_engine():
     if _engine is None:
         from rapidocr_onnxruntime import RapidOCR
         logger.info('加载 OCR 模型')
-        _engine = RapidOCR()
+        if sys.platform == 'darwin':
+            # Mac 上 onnxruntime 默认开满所有核，公会战一列识别 160ms 但 CPU 近 1000%，挤占同机的模拟器；
+            # 2 线程 280ms、CPU 200%（11-02 实测，M 系列 12 核）
+            _engine = RapidOCR(intra_op_num_threads=2, inter_op_num_threads=1)
+        else:
+            _engine = RapidOCR()
     return _engine
 
 

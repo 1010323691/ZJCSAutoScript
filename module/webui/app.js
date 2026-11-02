@@ -424,7 +424,7 @@
     Notify: {
       sentence() {
         const on = [get('Notify', 'Human') && '需要你处理时', get('Notify', 'Finish') && '每天跑完时'].filter(Boolean);
-        return on.length ? on.join('、') + '弹出 Windows 通知' : '开关开着，但两种情况都没选';
+        return on.length ? on.join('、') + '弹出' + (S.mac ? '系统' : ' Windows ') + '通知' : '开关开着，但两种情况都没选';
       },
       panel: notifyPanel,
     },
@@ -759,10 +759,10 @@
     return [
       h('p', { class: 'plain', style: { color: 'var(--ink2)' } }, '换模拟器或者换电脑时才需要改这里。'),
       h('div', { class: 'cols' },
-        h('label', { class: 'lf' }, '设备序列号', textInput('Device', 'Serial'), errorLine('Device_Serial'), h('span', { class: 'hint' }, '雷电第 1 个实例是 emulator-5554，第 2 个是 emulator-5556，依次加 2')),
+        h('label', { class: 'lf' }, '设备序列号', textInput('Device', 'Serial'), errorLine('Device_Serial'), h('span', { class: 'hint' }, S.arg.Device.Serial.help)),
         h('label', { class: 'lf' }, '游戏包名', textInput('Device', 'PackageName'), errorLine('Device_PackageName'))),
-      h('label', { class: 'lf' }, 'adb 路径', textInput('Device', 'AdbExecutable', { mono: true }), errorLine('Device_AdbExecutable'), h('span', { class: 'hint' }, '默认是脚本自带的 bin\\adb\\adb.exe，一般不用改')),
-      switchRow(() => get('Device', 'ReplaceAdb'), () => set('Device', 'ReplaceAdb', !get('Device', 'ReplaceAdb')), '替换雷电的 adb',
+      h('label', { class: 'lf' }, 'adb 路径', textInput('Device', 'AdbExecutable', { mono: true }), errorLine('Device_AdbExecutable'), h('span', { class: 'hint' }, S.mac ? S.arg.Device.AdbExecutable.help : '默认是脚本自带的 bin\\adb\\adb.exe，一般不用改')),
+      S.mac ? null : switchRow(() => get('Device', 'ReplaceAdb'), () => set('Device', 'ReplaceAdb', !get('Device', 'ReplaceAdb')), '替换雷电的 adb',
         '打开时把雷电目录里的 adb.exe 换成自带的那份（原文件改名 adb.exe.bak），会先结束所有 adb 进程。版本一致，雷电、别的脚本和这里就不会互相断线。'),
       h('div', { class: 'cols' },
         h('div', { class: 'field' }, h('h3', { class: 'lf' }, '截图方式'),
@@ -820,7 +820,7 @@
             h('span', { class: 'switch' })))),
       h('div', { class: 'inline' },
         h('button', { type: 'button', class: 'btn', 'aria-busy': () => String(NT.busy), onclick: testNotify }, icon('bell', 16), () => (NT.busy ? '正在发送…' : '发一条测试通知')),
-        h('span', { class: 'hint' }, '通知从屏幕右下角弹出，也会留在 Windows 通知中心。')),
+        h('span', { class: 'hint' }, S.mac ? '通知从屏幕右上角弹出，也会留在通知中心。第一次发时如果没弹出，到「系统设置 → 通知」里允许「脚本编辑器」发通知。' : '通知从屏幕右下角弹出，也会留在 Windows 通知中心。')),
     ];
   }
 
@@ -1816,7 +1816,7 @@
       if (!res.ok) throw new Error(String(res.status));
       const body = await res.json();
       const cfg = toUi(body.data);
-      S = { arg: body.argument, cfg, saved: clone(cfg), defaults: defaultsOf(body.argument), open: loadOpen(), errors: {}, saving: false, justSaved: false };
+      S = { arg: body.argument, mac: !!body.mac, cfg, saved: clone(cfg), defaults: defaultsOf(body.argument), open: loadOpen(), errors: {}, saving: false, justSaved: false };
       await pollStatus().catch(() => {});
       render();
       startTimers();
