@@ -1,5 +1,6 @@
 //! 配置服务（gui.py）：已经在跑就直接连，没在跑就先跑 updater.py 拉最新代码，再用项目里的 Python 在后台启动它。
 
+#[cfg(windows)]
 use std::env;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{SocketAddr, TcpStream};
@@ -104,7 +105,14 @@ pub fn healthy() -> bool {
     (text.starts_with("HTTP/1.0 200") || text.starts_with("HTTP/1.1 200")) && text.contains("\"runtime\"")
 }
 
+/// 桌面壳自己的名字，出错提示里用
+#[cfg(windows)]
+pub const APP_NAME: &str = "zjcs.exe";
+#[cfg(not(windows))]
+pub const APP_NAME: &str = "zjcs.command";
+
 /// 依次找：项目的 .venv、打包时放进来的 toolkit、系统 PATH 里的 python.exe
+#[cfg(windows)]
 fn find_python(root: &Path) -> Option<PathBuf> {
     let local = [root.join(".venv/Scripts/python.exe"), root.join("toolkit/python.exe")];
     if let Some(python) = local.into_iter().find(|path| path.is_file()) {
@@ -118,7 +126,24 @@ fn find_python(root: &Path) -> Option<PathBuf> {
         .find(|python| python.is_file())
 }
 
+/// Mac 依次找：项目的 .venv、分发包里的 toolkit。不找 PATH：从 Finder 打开拿不到终端里的 PATH，系统自带的 python3 又是 3.9
+#[cfg(not(windows))]
+fn find_python(root: &Path) -> Option<PathBuf> {
+    [root.join(".venv/bin/python"), root.join("toolkit/bin/python3")].into_iter().find(|path| path.is_file())
+}
+
+/// 自带的 Python 不受用户环境影响：Windows 靠 toolkit 里的 ._pth，Mac 没有这个机制，就去掉这几个环境变量。
+/// 环境变量会传给 gui.py 启动的调度脚本，所以整条进程链都是隔离的。
+fn isolate(command: &mut Command) {
+    if cfg!(not(windows)) {
+        command.env_remove("PYTHONHOME").env_remove("PYTHONPATH").env("PYTHONNOUSERSITE", "1");
+    }
+}
+
+#[cfg(windows)]
 const SETUP_HINT: &str = "准备环境：在项目目录打开终端，依次运行\n  python -m venv .venv\n  .venv\\Scripts\\python.exe -m pip install -r requirements.txt\n然后关掉这个窗口，重新打开 zjcs.exe。";
+#[cfg(not(windows))]
+const SETUP_HINT: &str = "准备环境：在项目目录打开终端，依次运行\n  uv venv --python 3.11 .venv\n  uv pip install --python .venv/bin/python -r requirements.txt\n然后退出这个程序，重新双击 zjcs.command。\n用分发包的话，重新解压一份完整的分发包。";
 
 pub fn start_and_wait(root: &Path, stage: impl Fn(&str)) -> Result<Backend, StartError> {
     stage("正在连接配置服务…");
@@ -128,7 +153,7 @@ pub fn start_and_wait(root: &Path, stage: impl Fn(&str)) -> Result<Backend, Star
     let python = find_python(root).ok_or_else(|| {
         StartError::new(
             "这台电脑上没找到 Python 环境",
-            format!("项目目录 {} 里没有 .venv 或 toolkit，系统 PATH 里也没有 python.exe。\n\n{SETUP_HINT}", root.display()),
+            format!("项目目录 {} 里没有可用的 Python（Windows 找 .venv、toolkit 和 PATH，Mac 找 .venv 和 toolkit）。\n\n{SETUP_HINT}", root.display()),
         )
     })?;
 
@@ -145,6 +170,7 @@ pub fn start_and_wait(root: &Path, stage: impl Fn(&str)) -> Result<Backend, Star
         .env("PYTHONUTF8", "1")
         .env("PYTHONIOENCODING", "utf-8:replace")
         .env("PYTHONUNBUFFERED", "1");
+    isolate(&mut command);
     #[cfg(windows)]
     command.creation_flags(0x08000000); // CREATE_NO_WINDOW
     let mut child = command.spawn().map_err(|error| {
@@ -223,6 +249,7 @@ fn run_updater(root: &Path, python: &Path, stage: &impl Fn(&str)) {
         .env("PYTHONUTF8", "1")
         .env("PYTHONIOENCODING", "utf-8:replace")
         .env("PYTHONUNBUFFERED", "1");
+    isolate(&mut command);
     #[cfg(windows)]
     command.creation_flags(0x08000000); // CREATE_NO_WINDOW
     let Ok(mut child) = command.spawn() else { return };
@@ -270,7 +297,7 @@ fn explain_exit(python: &Path, status: &str, output: &str) -> StartError {
     if output.contains("10048") || output.contains("Address already in use") || output.contains("只允许使用一次") {
         return StartError::new(
             format!("端口 {PORT} 被别的程序占用了"),
-            format!("关掉占用 {PORT} 端口的程序后，重新打开 zjcs.exe。\n\n原始输出：\n{tail}"),
+            format!("关掉占用 {PORT} 端口的程序后，重新打开 {APP_NAME}。\n\n原始输出：\n{tail}"),
         );
     }
     StartError::new("配置服务启动失败", tail)

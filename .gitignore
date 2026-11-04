@@ -15,7 +15,7 @@ kb/
 dev_tools/screens/*
 !dev_tools/screens/.gitkeep
 
-# 桌面壳编译产物（用 webapp/build.ps1 自己编译）
+# 桌面壳编译产物（Windows 用 webapp/build.ps1，Mac 用 cargo build，见 CLAUDE.md「Mac」）
 webapp/src-tauri/target/
 zjcs.exe
 

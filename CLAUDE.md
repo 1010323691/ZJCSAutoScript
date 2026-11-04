@@ -31,7 +31,7 @@ python -m venv .venv
 .venv\Scripts\python.exe -m dev_tools.button_extract              # 按 define.yaml 裁模板、重新生成 module/<模块>/assets.py
 
 powershell -ExecutionPolicy Bypass -File webapp\build.ps1         # 编译桌面壳，输出到根目录 zjcs.exe（需要 Rust stable）
-.venv\Scripts\python.exe dev_tools\package.py 1.0.0               # 打分发包 dist\ZJCSAutoScript-v<版本>-win64.zip
+.venv\Scripts\python.exe dev_tools\package.py 1.0.0               # 打分发包 dist\ZJCSAutoScript-v<版本>-win64.zip（Mac 上打出 -mac-arm64.zip，见「分发与自动更新」）
 ```
 
 `--config <名字>` 对应 `config/<名字>.yaml`。测试调度或界面时用单独的配置名（比如 `selftest`）；**不要在真实配置 `zjcs` 上点「启动」「立即执行」**，那会真的去跑游戏任务。
@@ -45,16 +45,17 @@ zjcs.exe（Tauri 2 桌面壳，webapp/src-tauri）
       └─ 点「启动」时 gui.py 启动 zjcs.py --loop（脱离桌面壳的作业对象，关窗口不会结束它）
 ```
 
-- 桌面壳找 Python 的顺序：`.venv\Scripts\python.exe` → `toolkit\python.exe`（分发包自带）→ PATH。配置服务已经在跑就直接连，不启动第二个，也不跑更新。
+- 桌面壳找 Python 的顺序：`.venv\Scripts\python.exe` → `toolkit\python.exe`（分发包自带）→ PATH；Mac 上是 `.venv/bin/python` → `toolkit/bin/python3`，不找 PATH。配置服务已经在跑就直接连，不启动第二个，也不跑更新。
 - `gui.py` 和调度进程（`zjcs.py`）之间不走网络，走 `module/runtime.py` 的文件通道：`config/<名>.runtime.json` 是运行状态（调度进程写），`config/<名>.cmd/*.json` 一条指令一个文件（立即执行、停止，调度进程读完删掉），`log/<名>.history.jsonl` 是运行记录。同一配置只允许一个调度进程（按 runtime.json 里的 pid 判断）。
 - 配置界面是纯原生 JS，没有构建步骤，`gui.py` 每次从磁盘读文件，改完刷新页面就行，不用重新编译 exe。
 
 ## Mac
 
-Mac（Apple Silicon）上用源码运行，没有桌面壳、分发包和自动更新，用浏览器打开配置界面。和 Windows 的区别都按 `sys.platform` / `os.name` 分支，Windows 行为不变：
+Mac（Apple Silicon）上源码运行和分发包都能用，分发包也会启动时自动更新；桌面壳和 Windows 同一份源码，在本机编译。和 Windows 的区别都按 `sys.platform` / `os.name`（Rust 里是 `cfg(windows)`）分支，Windows 行为不变：
 
 - **环境**：`uv venv --python 3.11 .venv`，再 `uv pip install --python .venv/bin/python -r requirements.txt`（系统自带的 `/usr/bin/python3` 是 3.9，和 Windows 的 3.11 不一致，不用它）。命令里的 `.venv\Scripts\python.exe` 换成 `.venv/bin/python`。
-- **启动**：双击 `zjcs.command`，在终端里跑 `gui.py` 并打开浏览器；配置服务已经在跑就只打开页面。关终端只关配置界面。
+- **桌面壳**：装 Rust stable（rustup）后 `cargo build --release --manifest-path webapp/src-tauri/Cargo.toml`，产物 `webapp/src-tauri/target/release/zjcs`，不打 `.app` 包（参考 ALAS 的 `Alas.command` 直接运行 Electron）。Mac 上它找 `.venv/bin/python` 和 `toolkit/bin/python3`，不找 PATH（从 Finder 启动拿不到终端的 PATH），启动 Python 时去掉 `PYTHONHOME` / `PYTHONPATH`、设 `PYTHONNOUSERSITE`（代替 Windows 的 `._pth` 隔离），启动失败用 `osascript` 弹对话框。改了 `webapp/` 要重新编译。11-04 实测：自己拉起 `gui.py`、已在跑时直接连、再次双击只拿前窗口、关窗口带走自己的 `gui.py` 而调度进程照常跑。强制结束（`kill`）时没有 Windows 作业对象那样的兜底，`gui.py` 会留着，下次打开直接连上它。
+- **启动**：双击 `zjcs.command`，它按 `webapp/src-tauri/target/release/zjcs`（源码）→ `toolkit/zjcs`（分发包）找桌面壳，用 `nohup` 在后台启动，输出追加到 `log/shell.txt`，关终端不影响窗口；桌面壳还没编译时退回在终端里跑 `gui.py` 并打开浏览器（配置服务已经在跑就只打开页面）。
 - **模拟器**：BlueStacks Air，adb 用它自带的 `/Applications/BlueStacks.app/Contents/MacOS/hd-adb`，序列号填 `127.0.0.1:<adb 端口>`（第 1 个实例 5555，第 2 个 5565，依次加 10；`bluestacks.conf` 里的 `bst.instance.<实例>.adb_port`）。adb 服务只在启动时扫一遍 `emulator-XXXX`，之后才开的实例不会出现在 `adb devices` 里，所以用地址：`adb_devices()` 发现地址不在线时先 `adb connect`。这两个默认值写在 `argument.yaml` 参数的 `mac:` 里，`load_argument()` 在 Mac 上用它覆盖 `value` / `help`。自带的 `bin/adb/adb.exe` 和「替换雷电的 adb」只在 Windows 上用：`gui.py` 只在 Windows 上导入 `adb_replace`（它依赖 `winreg`），Mac 的设置页也不显示这个开关。
 - **OCR**：仍是 RapidOCR（onnxruntime 有 arm64 包）。onnxruntime 默认开满所有核，公会战一列识别 CPU 近 1000%，会挤占同机模拟器（ALAS 在 Mac 上遇到同样的问题，它限制了 BLAS 线程），所以 Mac 上 `module/ocr/ocr.py` 限制 2 线程：约 280ms、CPU 200%（默认 160ms，单线程 490ms，11-02 实测）。
 - **进程**：调度进程用 `start_new_session=True` 启动（代替 Windows 的脱离作业对象），强制停止用 `killpg` 连同 adb 一起结束（代替 `taskkill /T`）。`pid_alive` 用 `ps` 查，没回收的僵尸进程算已退出。
@@ -85,9 +86,11 @@ Mac（Apple Silicon）上用源码运行，没有桌面壳、分发包和自动�
 
 ## 分发与自动更新
 
-- `dev_tools/package.py` 把建 `.venv` 的基础 Python（解释器、标准库）和 `.venv` 的 site-packages（去掉 pip、pywebio 等开发用的库）复制进 `toolkit\`，写 `toolkit\python311._pth` 隔离掉用户电脑上的 Python。它还把 `git rev-parse HEAD` 写进 `version.json`，所以**要先提交再打包**。
-- `updater.py` 拿 `version.json` 和 GitHub `main` 的最新提交比，不同就下载源码 zip，替换 `MANAGED` 里的文件。以下情况不更新：源码目录（有 `.git`）、调度进程正在跑、`requirements.txt` 变了（会提示用户下载新分发包）。
-- 因此**推到 main 的代码，用分发包的用户下次打开就会拿到**。没验证过的改动不要直接推 main。改了 `requirements.txt` 或 `webapp/`（桌面壳）后，自动更新覆盖不到，要重新编译、打包，发新的 GitHub Release（`gh release create v<版本> dist\...zip`）。
+- `dev_tools/package.py` 把建 `.venv` 的基础 Python（解释器、标准库）和 `.venv` 的 site-packages（去掉 pip、pywebio 等开发用的库）复制进 `toolkit\`，写 `toolkit\python311._pth` 隔离掉用户电脑上的 Python。它还把 `git rev-parse HEAD` 写进 `version.json`，所以**要先提交、推到 main 再打包**（不然用户第一次打开就会被「更新」回 main 的旧代码）。
+- **Mac 包**（在 Mac 上运行 `package.py`）：`-mac-arm64.zip`。`.venv` 的基础 Python 是 uv 的 python-build-standalone，静态链接、可整体挪动，复制成 `toolkit/bin/python3.11` + `toolkit/lib/python3.11/`；桌面壳复制成 `toolkit/zjcs`。用 `ditto` 压缩，保留符号链接和可执行位。下载解压的文件带 `com.apple.quarantine`，没签名会被 Gatekeeper 拦：用户第一次在「隐私与安全性」里对 `zjcs.command` 点「仍要打开」，`zjcs.command` 发现 `toolkit/zjcs` 还带标记时用 `xattr -r -d` 清掉整个目录，以后双击直接开（README 有步骤）。11-04 实测：带隔离标记解压后，`zjcs.command` 清标记、拉起 `toolkit/zjcs` 和自带 Python 的 `gui.py`，模拟器画面能截到；Gatekeeper 的「仍要打开」弹窗本身没在没签名的下载上走过。
+- **Mac 上打 Windows 包**：`package.py <版本> --win-from <旧的 -win64.zip>`，代码用当前的，`toolkit\` 和 `zjcs.exe` 从旧包原样拿。Mac 上做不出 Windows 的 Python 和 `zjcs.exe`（交叉编译缺 `llvm-rc`），所以只在 `requirements.txt` 和 `webapp/` 的功能都没变时用；v1.1.0 就是这样从 v1.0.2 拿的（v1.1.0 的桌面壳改动在 Windows 上只是提示文字，旧 `zjcs.exe` 功能一样，新 Rust 代码还没在 Windows 上编译过）。
+- `updater.py` 拿 `version.json` 和 GitHub `main` 的最新提交比，不同就下载源码 zip，替换 `MANAGED` 里的文件（`zjcs.command` 也在里面，两个平台的包都带它）。`zipfile.extractall` 不保留权限，Mac 上解压后按压缩包里记的权限补回可执行位，`zjcs.command` 再兜底 `chmod 755`。以下情况不更新：源码目录（有 `.git`）、调度进程正在跑、`requirements.txt` 变了（会提示用户下载新分发包）。
+- 因此**推到 main 的代码，用分发包的用户下次打开就会拿到**。没验证过的改动不要直接推 main。改了 `requirements.txt` 或 `webapp/`（桌面壳）后，自动更新覆盖不到，要重新编译、打包，发新的 GitHub Release（`gh release create v<版本> dist\...zip`，Windows 和 Mac 两个包放在同一个 Release 里）。
 
 ## 安全约定（不能违反）
 
