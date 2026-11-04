@@ -18,6 +18,7 @@ version.json 记打包时的提交，updater.py 拿它和 GitHub 上的 main 比
 """
 import json
 import os
+import platform as host
 import shutil
 import subprocess
 import sys
@@ -42,8 +43,9 @@ def ignore_cache(folder, names):
 
 
 def copy_tree(src, dst):
+    # 符号链接跟进去复制：.venv 里万一有指向 uv 缓存的链接，复制成链接到了别的电脑上就断了
     if os.path.isdir(src):
-        shutil.copytree(src, dst, ignore=ignore_cache, symlinks=True)
+        shutil.copytree(src, dst, ignore=ignore_cache)
     else:
         os.makedirs(os.path.dirname(dst), exist_ok=True)
         shutil.copy2(src, dst)
@@ -116,6 +118,13 @@ def copy_from_windows_package(archive, out):
     for need in ('zjcs.exe', os.path.join('toolkit', 'python.exe')):
         if not os.path.isfile(os.path.join(out, need)):
             sys.exit(f'{archive} 里没有 {need}，不是 Windows 分发包')
+    # 旧包的 Python 只装了它那时的依赖；依赖变了还复用，用户一打开就缺库，自动更新也补不上
+    with zipfile.ZipFile(archive) as z:
+        old = next((n for n in z.namelist() if n.split('/', 1)[-1] == 'requirements.txt'), None)
+        old_text = z.read(old).decode('utf-8') if old else ''
+    with open(os.path.join(ROOT, 'requirements.txt'), encoding='utf-8') as f:
+        if sorted(old_text.split()) != sorted(f.read().split()):
+            sys.exit(f'{archive} 打包时的 requirements.txt 和现在不一样，不能复用它的 toolkit，要回 Windows 上打包')
 
 
 def write_zip(out, archive):
@@ -130,6 +139,16 @@ def write_zip(out, archive):
                 z.write(os.path.join(folder, f), os.path.join(rel, f))
 
 
+def check_mac_shell():
+    """桌面壳要比 Rust 源码新，不然打进包的是改动前的旧版本"""
+    src = os.path.join(ROOT, 'webapp', 'src-tauri')
+    files = [os.path.join(src, name) for name in ('Cargo.toml', 'Cargo.lock', 'tauri.conf.json')]
+    for folder, _, names in os.walk(os.path.join(src, 'src')):
+        files += [os.path.join(folder, name) for name in names]
+    if os.path.getmtime(MAC_SHELL) < max(os.path.getmtime(f) for f in files if os.path.isfile(f)):
+        sys.exit('桌面壳比 webapp/src-tauri 的源码旧，先重新 cargo build --release --manifest-path webapp/src-tauri/Cargo.toml')
+
+
 def write_mac_zip(out, archive):
     # ditto 保留符号链接和可执行权限，和 Finder「压缩」的结果一样，双击就能解压
     if os.path.exists(archive):
@@ -142,17 +161,23 @@ def main():
     win_from = None
     if '--win-from' in args:
         i = args.index('--win-from')
+        if i + 1 >= len(args):
+            sys.exit('--win-from 后面要跟旧的 -win64.zip 路径')
         win_from = os.path.abspath(args[i + 1])
         del args[i:i + 2]
     version = args[0] if args else '1.0.0'
     platform = 'win64' if win_from or os.name == 'nt' else 'mac-arm64'
     if platform == 'mac-arm64' and sys.platform != 'darwin':
         sys.exit('只支持在 Windows 或 Mac 上打包')
+    if platform == 'mac-arm64' and host.machine() != 'arm64':
+        sys.exit(f'当前 Python 是 {host.machine()}，Mac 包只打 Apple Silicon（arm64）的，换 arm64 的 Python 建 .venv')
 
     if platform == 'win64' and not win_from and not os.path.isfile(os.path.join(ROOT, 'zjcs.exe')):
         sys.exit('没有 zjcs.exe，先运行 webapp\\build.ps1')
-    if platform == 'mac-arm64' and not os.path.isfile(MAC_SHELL):
-        sys.exit('没有编译桌面壳，先 cargo build --release --manifest-path webapp/src-tauri/Cargo.toml')
+    if platform == 'mac-arm64':
+        if not os.path.isfile(MAC_SHELL):
+            sys.exit('没有编译桌面壳，先 cargo build --release --manifest-path webapp/src-tauri/Cargo.toml')
+        check_mac_shell()
 
     name = f'ZJCSAutoScript-v{version}'
     out = os.path.join(DIST, platform, name)

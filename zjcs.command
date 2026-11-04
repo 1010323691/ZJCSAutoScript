@@ -38,6 +38,10 @@ if [ -n "$shell" ]; then
     # 桌面壳从自己的位置往上找项目目录，已经开着时会把原窗口拿到前面
     # 追加写日志：已经开着的那个可能还在写
     mkdir -p log
+    # 超过 1MB 就从头写，免得一直长
+    if [ -f log/shell.txt ] && [ "$(stat -f %z log/shell.txt)" -gt 1048576 ]; then
+        : > log/shell.txt
+    fi
     nohup "$shell" >> log/shell.txt 2>&1 &
     disown
     exit 0
@@ -51,4 +55,6 @@ if curl -s -o /dev/null --max-time 2 http://127.0.0.1:22367/api/status; then
     exit 0
 fi
 
+# 和桌面壳一样隔离用户的 Python 环境变量
+unset PYTHONHOME PYTHONPATH
 PYTHONNOUSERSITE=1 exec "$python" gui.py "$@"

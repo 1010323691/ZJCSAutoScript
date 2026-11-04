@@ -94,7 +94,8 @@ fn applescript(text: &str) -> String {
     format!("\"{}\"", text.replace('\\', "\\\\").replace('"', "\\\""))
 }
 
-/// 项目根目录：exe 所在目录往上找（Mac 上 zjcs.command 直接运行 target/release/zjcs）（也兼容从 target/release 里直接运行），再看当前目录
+/// 项目根目录：桌面壳所在目录往上找，再看当前目录。桌面壳可能在项目根目录（zjcs.exe）、
+/// toolkit/（Mac 分发包的 toolkit/zjcs）或 webapp/src-tauri/target/release/（源码编译），都在往上 6 层以内
 fn locate_root() -> Result<PathBuf> {
     let executable = env::current_exe().context("找不到桌面壳自己的位置")?;
     let cwd = env::current_dir().context("读不到当前目录")?;

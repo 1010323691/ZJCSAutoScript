@@ -92,8 +92,13 @@ def restore_modes(z, folder):
     """extractall 不保留文件权限，Mac 上 zjcs.command 没了可执行位就双击不了；按压缩包里记的权限补回去"""
     for info in z.infolist():
         mode = (info.external_attr >> 16) & 0o777
-        if mode and not info.is_dir():
-            os.chmod(os.path.join(folder, info.filename), mode)
+        path = os.path.join(folder, *info.filename.split('/'))
+        # 只补普通文件；extractall 改写过的怪文件名对不上就跳过，不能因为一个文件让整次更新失败
+        if mode and not info.is_dir() and os.path.isfile(path) and not os.path.islink(path):
+            try:
+                os.chmod(path, mode)
+            except OSError:
+                pass
     for path in glob.glob(os.path.join(folder, '*', 'zjcs.command')):
         os.chmod(path, 0o755)
 
