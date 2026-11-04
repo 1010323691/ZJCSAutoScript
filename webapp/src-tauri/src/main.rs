@@ -75,13 +75,29 @@ fn show_native_message(title: &str, message: &str) {
     unsafe {
         let _ = MessageBoxW(None, &HSTRING::from(message), &HSTRING::from(title), MB_OK | MB_ICONERROR);
     }
-    #[cfg(not(windows))]
+    #[cfg(target_os = "macos")]
+    {
+        // 窗口都没建起来，用系统对话框说一声
+        let script = format!(
+            "display dialog {} with title {} buttons {{\"好\"}} default button 1 with icon stop",
+            applescript(message),
+            applescript(title)
+        );
+        let _ = std::process::Command::new("osascript").args(["-e", &script]).status();
+    }
+    #[cfg(not(any(windows, target_os = "macos")))]
     eprintln!("{title}: {message}");
 }
 
-/// 项目根目录：exe 所在目录往上找（也兼容从 target/release 里直接运行），再看当前目录
+#[cfg(target_os = "macos")]
+fn applescript(text: &str) -> String {
+    format!("\"{}\"", text.replace('\\', "\\\\").replace('"', "\\\""))
+}
+
+/// 项目根目录：桌面壳所在目录往上找，再看当前目录。桌面壳可能在项目根目录（zjcs.exe）、
+/// toolkit/（Mac 分发包的 toolkit/zjcs）或 webapp/src-tauri/target/release/（源码编译），都在往上 6 层以内
 fn locate_root() -> Result<PathBuf> {
-    let executable = env::current_exe().context("找不到 zjcs.exe 自己的位置")?;
+    let executable = env::current_exe().context("找不到桌面壳自己的位置")?;
     let cwd = env::current_dir().context("读不到当前目录")?;
     let candidates = executable
         .parent()
@@ -93,7 +109,7 @@ fn locate_root() -> Result<PathBuf> {
             return Ok(dir.to_path_buf());
         }
     }
-    anyhow::bail!("找不到 ZJCSAutoScript 的项目目录（里面要有 gui.py 和 zjcs.py）。把 zjcs.exe 放在项目根目录里再打开。")
+    anyhow::bail!("找不到 ZJCSAutoScript 的项目目录（里面要有 gui.py 和 zjcs.py）。把 {} 放在项目根目录里再打开。", backend::APP_NAME)
 }
 
 /// 只允许留在本机配置服务和内置启动页，其他链接交给系统浏览器
@@ -155,7 +171,7 @@ fn start_application(app: AppHandle, window: WebviewWindow, root: PathBuf, repor
 fn run() -> Result<()> {
     let root = locate_root()?;
     let app = tauri::Builder::default()
-        // 再双击 zjcs.exe 时不开第二个，把已有窗口拿到前面
+        // 再双击桌面壳时不开第二个，把已有窗口拿到前面
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.unminimize();
@@ -190,11 +206,12 @@ fn run() -> Result<()> {
 
 fn main() {
     if let Err(error) = run() {
-        show_native_message(
-            "ZJCSAutoScript 启动失败",
-            &format!(
-                "{error:#}\n\n如果提示和 WebView2 有关：这台电脑缺少 Microsoft Edge WebView2 运行时（Windows 10/11 一般自带），到 https://developer.microsoft.com/microsoft-edge/webview2/ 下载「常青版运行时」装上即可。"
-            ),
+        #[cfg(windows)]
+        let message = format!(
+            "{error:#}\n\n如果提示和 WebView2 有关：这台电脑缺少 Microsoft Edge WebView2 运行时（Windows 10/11 一般自带），到 https://developer.microsoft.com/microsoft-edge/webview2/ 下载「常青版运行时」装上即可。"
         );
+        #[cfg(not(windows))]
+        let message = format!("{error:#}");
+        show_native_message("ZJCSAutoScript 启动失败", &message);
     }
 }

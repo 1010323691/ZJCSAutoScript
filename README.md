@@ -3,7 +3,7 @@
 在雷电模拟器上自动做《杖剑传说》的每日任务：杂货、宝库、糖果树、小推车、小屋、日常副本、羁绊冒险、命运果实、竞技场、素材秘境、圣兽试炼、双影幻境、公会挂机、公会捐赠、公会战、公会讨伐，最后统一领奖励。常驻运行，每天服务器刷新后自动再跑一遍；游戏没开或卡死会自己重启游戏并登录。
 
 > **推荐直接下载分发包，解压就能用，不用装 Python。**
-> 👉 [下载最新版](https://github.com/1010323691/ZJCSAutoScript/releases/latest)　·　[直接下载 v1.0.2 压缩包（约 105 MB）](https://github.com/1010323691/ZJCSAutoScript/releases/download/v1.0.2/ZJCSAutoScript-v1.0.2-win64.zip)
+> 👉 [下载最新版](https://github.com/1010323691/ZJCSAutoScript/releases/latest)　·　直接下载 v1.1.0：[Windows（约 105 MB）](https://github.com/1010323691/ZJCSAutoScript/releases/download/v1.1.0/ZJCSAutoScript-v1.1.0-win64.zip)　·　[Mac（Apple Silicon，约 108 MB，试验中）](https://github.com/1010323691/ZJCSAutoScript/releases/download/v1.1.0/ZJCSAutoScript-v1.1.0-mac-arm64.zip)
 
 ## 安装
 
@@ -86,16 +86,19 @@
 
 ### Mac（试验中）
 
-Apple Silicon 的 Mac 可以用源码运行，模拟器用 BlueStacks Air，**还没在游戏上实测过**，遇到问题请提 issue。
+Apple Silicon（M 系列芯片）的 Mac 可以用，模拟器用 BlueStacks Air。日常任务**还没在 Mac 上完整实测过**，遇到问题请提 issue。Intel 芯片的 Mac 用不了。
 
-1. 装好 [uv](https://docs.astral.sh/uv/)，下载本仓库源码，在目录里运行：
-   ```bash
-   uv venv --python 3.11 .venv && uv pip install --python .venv/bin/python -r requirements.txt
-   ```
-2. BlueStacks 里打开 ADB 调试，分辨率选竖屏 720×1280、DPI 320，装好游戏手动登录一次。
-3. 双击 `zjcs.command`，浏览器会打开配置界面。adb 路径默认是 BlueStacks 自带的 `hd-adb`，序列号填 `127.0.0.1:端口`，端口是 BlueStacks 设置里 ADB 那一项显示的（第 1 个实例 5555，第 2 个 5565，依次加 10）。点「检查连接」确认后，用法和 Windows 一样。
+1. BlueStacks 里打开 ADB 调试，分辨率选竖屏 720×1280、DPI 320，装好游戏手动登录一次。
+2. 到 [Releases](https://github.com/1010323691/ZJCSAutoScript/releases/latest) 下载 `ZJCSAutoScript-v<版本>-mac-arm64.zip`，双击解压，把文件夹放到任意位置（比如「文稿」）。包里自带 Python，不用另外装。
+3. **第一次打开要手动允许一次**（程序没有苹果的开发者签名，系统会拦下）：
+   1. 双击 `zjcs.command`，系统提示「无法验证开发者」或「Apple 无法检查其是否包含恶意软件」，点「完成」或「取消」。
+   2. 打开「系统设置 → 隐私与安全性」，拉到最下面，在 `zjcs.command` 那一行点「仍要打开」，输入开机密码确认。
+   3. 再双击 `zjcs.command`，在弹窗里点「打开」。它会顺带解除整个文件夹的拦截，以后双击就直接打开。
+4. 配置界面在独立窗口里打开。adb 路径默认是 BlueStacks 自带的 `hd-adb`，序列号填 `127.0.0.1:端口`，端口是 BlueStacks 设置里 ADB 那一项显示的（第 1 个实例 5555，第 2 个 5565，依次加 10）。点「检查连接」确认后，用法和 Windows 一样。
 
-Mac 上没有自动更新，用 `git pull` 或重新下载源码更新。
+- 双击 `zjcs.command` 会先闪一下终端窗口，桌面壳在后台打开后终端就可以关掉，不影响窗口和脚本。
+- **自动更新和 Windows 一样**：每次打开先从 GitHub 取最新代码，只换代码文件，`config/` 不动。
+- 用源码运行（开发用）见 [CLAUDE.md](CLAUDE.md) 的「Mac」一节。
 
 ## 脚本不会做的事
 
