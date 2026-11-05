@@ -18,6 +18,8 @@ SHIBAN_RIGHT = Button(name='SHIBAN_RIGHT', area=(428, 561, 496, 629), color=(185
 PLAYER_INFO = Button(name='PLAYER_INFO', area=(80, 975, 180, 1000), color=(173, 173, 172), button=(80, 975, 180, 1000), file='./assets/fenek/PLAYER_INFO.png')
 PET_INFO = Button(name='PET_INFO', area=(290, 165, 430, 200), color=(126, 126, 125), button=(290, 165, 430, 200), file='./assets/fenek/PET_INFO.png')
 SHIBAN_SCENE = Button(name='SHIBAN_SCENE', area=(300, 290, 430, 390), color=(87, 126, 74), button=(300, 290, 430, 390), file='./assets/fenek/SHIBAN_SCENE.png')
+SHIBAN_STATUE = Button(name='SHIBAN_STATUE', area=(538, 136, 582, 186), color=(207, 214, 199), button=(538, 136, 582, 186), file='./assets/fenek/SHIBAN_STATUE.png')
+STATUE_LEAVE = Button(name='STATUE_LEAVE', area=(345, 970, 400, 998), color=(169, 169, 169), button=(100, 962, 620, 1006), file='./assets/fenek/STATUE_LEAVE.png')
 SHIBAN_SWIRL = Button(name='SHIBAN_SWIRL', area=(434, 452, 502, 520), color=(178, 196, 167), button=(434, 452, 502, 520), file='./assets/fenek/SHIBAN_SWIRL.png')
 LEAVE_CONFIRM = Button(name='LEAVE_CONFIRM', area=(125, 520, 390, 548), color=(172, 172, 171), button=(125, 520, 390, 548), file='./assets/fenek/LEAVE_CONFIRM.png')
 LEAVE_CONFIRM_OK = Button(name='LEAVE_CONFIRM_OK', area=(465, 722, 520, 750), color=(132, 134, 73), button=(385, 712, 600, 760), file='./assets/fenek/LEAVE_CONFIRM_OK.png')

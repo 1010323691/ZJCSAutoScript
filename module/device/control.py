@@ -29,7 +29,10 @@ class Control(Connection):
             cmds.append(f'input motionevent MOVE {(x1 + x2) // 2} {(y1 + y2) // 2}')
             cmds.append(f'input motionevent MOVE {x2} {y2}')
         cmds.append(f'input motionevent UP {points[-1][0]} {points[-1][1]}')
-        self.adb_shell('; '.join(cmds), timeout=30)
+        out = self.adb_shell('; '.join(cmds), timeout=30)
+        if 'Unknown' in out or 'Error' in out or 'usage' in out.lower():
+            # Android 9 及以下没有 input motionevent，命令不会拖，只会打印用法或报错
+            logger.error(f'设备不支持 input motionevent（要 Android 10 以上），拖不了路径: {out.strip()[:200]}')
 
     def back(self):
         logger.info('Key BACK')

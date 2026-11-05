@@ -18,11 +18,11 @@ from module.activity.assets import REWARD_BADGE
 from module.base.button import ClickArea
 from module.base.timer import Timer
 from module.base.utils import area_offset
-from module.exception import GamePageUnknownError, TaskNotImplemented
+from module.exception import GamePageUnknownError, GameStuckError, GameTooManyClickError, TaskNotImplemented
 from module.fenek.assets import *
 from module.logger import logger
 from module.reward.assets import EVENT_CHECK, EVENT_ENTRY
-from module.reward.reward import DailyReward
+from module.reward.reward import LIST_REGION as EVENT_LIST_REGION, DailyReward
 from module.ui.assets import BACK_ARROW
 from module.ui.page import page_home
 
@@ -493,6 +493,7 @@ class ShibanSolver:
         self.main = main
         self.device = main.device
         self.misclick = False   # 点到了角色、打开过玩家信息（relocate 里发现并关掉）
+        self.statue = None      # 菲涅克石像所在的格子（草地上，走路时绕开）
 
     def tap(self, point, name):
         tap_point(self.device, point, name)
@@ -770,10 +771,15 @@ class ShibanSolver:
         for _ in range(3):
             # 点到了角色：玩家信息面板盖住了场景，后面再点会点到面板上的按钮
             # （11-05 接着点到了「幻兽」按钮，打开幻兽详情，后面 100 多下都点在面板上）。关掉，这一轮作废
-            if not (self.main.appear(PLAYER_INFO, offset=(20, 20)) or self.main.appear(PET_INFO, offset=(20, 20))):
+            if self.main.appear(STATUE_LEAVE, offset=(20, 20)):
+                # 点到了石像：「供奉黄金甲虫帮你解惑」，只点「离开」
+                logger.warning('点到了菲涅克石像，点「离开」')
+                self.device.click(STATUE_LEAVE)
+            elif self.main.appear(PLAYER_INFO, offset=(20, 20)) or self.main.appear(PET_INFO, offset=(20, 20)):
+                logger.warning('点到了角色，打开了玩家信息，按返回关掉')
+                self.device.back()
+            else:
                 break
-            logger.warning('点到了角色，打开了玩家信息，按返回关掉')
-            self.device.back()
             time.sleep(1.5)
             self.device.screenshot()
             self.misclick = True
@@ -937,7 +943,7 @@ class ShibanSolver:
                 continue
             for dr, dc in self.DIRS.values():
                 q = (u[0] + dr, u[1] + dc)
-                if not (r1 <= q[0] <= r2 and c1 <= q[1] <= c2) or self.kinds.get(q) == 'swirl':
+                if not (r1 <= q[0] <= r2 and c1 <= q[1] <= c2) or self.kinds.get(q) == 'swirl' or q == self.statue:
                     continue
                 nd = d + (100 if q in self.kinds else 1)
                 if nd < cost.get(q, 1e9):
@@ -966,6 +972,22 @@ class ShibanSolver:
                     out.append(cells[i])
         return out
 
+    def find_statue(self):
+        """
+        石板旁边草地上的菲涅克石像在哪一格。点到它会弹「供奉黄金甲虫帮你解惑」对话
+        （11-05 石板谜题 1：开局角色站在石像旁边，去起点的第一下点在石像上）。看不到就沿用上次的
+        """
+        x1, y1, x2, y2 = self.SCAN
+        r = cv2.matchTemplate(self.device.image[y1:y2, x1:x2], SHIBAN_STATUE.template, cv2.TM_CCOEFF_NORMED)
+        _, sim, _, loc = cv2.minMaxLoc(r)
+        if sim < 0.85:
+            return self.statue
+        h, w = SHIBAN_STATUE.template.shape[:2]
+        x0, y0 = self.origin
+        cx, cy = loc[0] + x1 + w // 2, loc[1] + y1 + h // 2
+        self.statue = (round((cy - y0) / self.PITCH), round((cx - x0) / self.PITCH))
+        return self.statue
+
     def cell_point(self, cell):
         x0, y0 = self.origin
         return int(x0 + cell[1] * self.PITCH), int(y0 + cell[0] * self.PITCH)
@@ -988,6 +1010,7 @@ class ShibanSolver:
         # 角色站在石板上也一样按路线走：grass_route 会从石板上踩最少的格子下到草地（四周都是石板时也走得出去，
         # 比如第 6 关一轮作废时停在 (5,1)）
         start = self.char_cell(char)
+        self.find_statue()
         route = self.grass_route(start, goal)
         if route is None:
             logger.warning(f'从 {start} 到 {goal} 找不到路')
@@ -1022,7 +1045,7 @@ class ShibanSolver:
         best = None
         for r in range(min(rows) - 2, max(rows) + 3):
             for c in range(min(cols) - 2, max(cols) + 3):
-                if min(max(abs(r - a), abs(c - b)) for a, b in self.kinds) < 2:
+                if min(max(abs(r - a), abs(c - b)) for a, b in self.kinds) < 2 or (r, c) == self.statue:
                     continue
                 d = abs(r - here[0]) + abs(c - here[1])
                 if best is None or d < best[0]:
@@ -1288,6 +1311,10 @@ class FenekPuzzle(DailyReward):
                     exit_button = PUZZLE_EXIT_ONLY if self.appear(PUZZLE_EXIT_ONLY, offset=(10, 10)) else PUZZLE_EXIT
                     self.click_until(exit_button, self.gone(PUZZLE_SUCCESS, offset=(10, 10)), handle_popups=False)
                     continue
+                if self.appear(STATUE_LEAVE, offset=(20, 20), interval=2):
+                    # 误点石像的「供奉黄金甲虫」对话：只点「离开」
+                    self.device.click(STATUE_LEAVE)
+                    continue
                 if self.appear(LEAVE_CONFIRM, offset=(20, 20), interval=2):
                     # 「是否退出当前活动关卡」：退出，本关进度不保留
                     self.device.click(LEAVE_CONFIRM_OK)
@@ -1326,6 +1353,9 @@ class FenekPuzzle(DailyReward):
                 logger.info('关掉玩家信息面板')
                 self.device.back()
                 continue
+            if self.appear(STATUE_LEAVE, offset=(20, 20), interval=3):
+                self.device.click(STATUE_LEAVE)
+                continue
             if timer.reached():
                 return None
             time.sleep(0.5)
@@ -1349,7 +1379,15 @@ class FenekPuzzle(DailyReward):
         if where == 'home':
             if not self.ui_click(EVENT_ENTRY, check_button=EVENT_CHECK, offset=(10, 10), retry_wait=3, timeout=15):
                 raise GamePageUnknownError
-        return 'list' if self.open_event_card(EVENT_FENEK, FENEK_CHECK, need_dot=False) else None
+        if self.open_event_card(EVENT_FENEK, FENEK_CHECK, need_dot=False):
+            return 'list'
+        # open_event_card 在「找到卡片但点进去没反应」时也返回 False：卡片还在就是进不去，不能当成活动结束（会白丢一天）
+        self.device.screenshot()
+        if self.appear(FENEK_CHECK, offset=(10, 10)):
+            return 'list'
+        if self.find(EVENT_FENEK, EVENT_LIST_REGION, similarity=0.8):
+            raise GamePageUnknownError('活动汇总里有菲涅克的谜题，但点不进去')
+        return None
 
     def play_levels(self, enter=True):
         """从关卡列表进当前关（enter=False 时已经在关卡里），一关接一关打。返回解开的关数，没解开返回 None"""
@@ -1385,9 +1423,14 @@ class FenekPuzzle(DailyReward):
             return True
         try:
             solved = self.play_levels(enter=where == 'list')
-        except Exception:
-            # 关卡里出错先自己退回列表：框架的恢复会「点上方空白处」，在场景里会点到角色
-            self.leave_level()
+        except (GameStuckError, GameTooManyClickError, GamePageUnknownError, TaskNotImplemented):
+            # 游戏还在、只是卡住或认不出时，先自己退回列表：框架的恢复会「点上方空白处」，在场景里会点到角色。
+            # 游戏没了（GameNotRunningError）、要停机（ScriptError / RequestHumanTakeover）就直接抛，不在这里空转。
+            # 退的时候再出错只记一下，抛原来的异常
+            try:
+                self.leave_level()
+            except Exception as e:
+                logger.warning(f'出错后退出关卡也失败: {type(e).__name__} {e}')
             raise
         self.leave_level()
         self.back_home()
