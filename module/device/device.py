@@ -4,7 +4,7 @@ from collections import deque
 from module.base.timer import Timer
 from module.device.control import Control
 from module.device.screenshot import Screenshot
-from module.exception import GameNotRunningError, GameStuckError, GameTooManyClickError
+from module.exception import GameNotRunningError, GameStuckError, GameTooManyClickError, ScriptError
 from module.logger import logger
 from module.ui.assets import GIFT_POPUP_CLOSE, GIFT_POPUP_FOOTER, GIFT_POPUP_TIMER
 
@@ -76,6 +76,30 @@ class Device(Screenshot, Control):
     def swipe(self, p1, p2, duration=400, name='SWIPE'):
         super().swipe(p1, p2, duration=duration, name=name)
         self.stuck_record_clear()
+
+    def drag_path(self, points, name='DRAG'):
+        super().drag_path(points, name=name)
+        self.stuck_record_clear()
+
+    def screenshot_fast(self):
+        """
+        不等截图间隔、不查礼包弹窗的截图，给要连续采样的地方用（菲涅克的谜题·音符晶灯听旋律，音符最短 0.1 秒一个）。
+        结果照样存进 image 和 screenshot_deque，出错时能存下来。
+        """
+        try:
+            if self.config.Device_ScreenshotMethod == 'adb_png':
+                image = self.screenshot_adb_png()
+            else:
+                image = self.screenshot_adb_raw()
+        except ScriptError:
+            raise
+        except Exception as e:
+            # adb 偶尔断一下：交给普通截图，它会重试、重连
+            logger.warning(f'快速截图失败，改用普通截图: {e}')
+            return self.screenshot()
+        self.image = image
+        self.screenshot_deque.append((time.time(), image))
+        return image
 
     def back(self):
         super().back()
