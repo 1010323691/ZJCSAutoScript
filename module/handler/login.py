@@ -47,10 +47,37 @@ class LoginHandler(UI):
                 if self.appear(LOGIN_CHECK, offset=(20, 20), interval=5):
                     self.device.click(LOGIN_CHECK)
                     continue
+                if self.resumed_activity():
+                    continue
                 # 其余是加载、健康忠告、正在登录，等着就行
                 time.sleep(1)
         finally:
             self.device.long_wait(False)
+
+    def resumed_activity(self):
+        """
+        重启后游戏会直接回到上次没退出的活动关卡（11-05 菲涅克的谜题：重启后停在石板谜题的场景里，
+        一直等不到家园，180 秒后停机）。认出关卡、「解谜成功」页、关卡列表、活动汇总，就往外退到家园。
+        """
+        from module.fenek.assets import (FENEK_CHECK, LEAVE_CONFIRM, LEAVE_CONFIRM_OK, PUZZLE_EXIT, PUZZLE_EXIT_ONLY,
+                                         PUZZLE_SUCCESS, SHIBAN_SCENE, YINFU_STATUE, YUANSU_CHECK)
+        from module.reward.assets import EVENT_CHECK
+        if self.appear(PUZZLE_SUCCESS, offset=(10, 10), interval=3):
+            # 最后一关的成功页只有居中的「退出」
+            self.device.click(PUZZLE_EXIT_ONLY if self.appear(PUZZLE_EXIT_ONLY, offset=(10, 10)) else PUZZLE_EXIT)
+            return True
+        if self.appear(LEAVE_CONFIRM, offset=(20, 20), interval=3):
+            self.device.click(LEAVE_CONFIRM_OK)
+            return True
+        if self.appear(FENEK_CHECK, offset=(10, 10)) or self.appear(EVENT_CHECK, offset=(10, 10)) \
+                or self.appear(YUANSU_CHECK, offset=(10, 30)) \
+                or YINFU_STATUE.match_region(self.device.image, (480, 430, 720, 780), similarity=0.85) > 0.85 \
+                or SHIBAN_SCENE.match_region(self.device.image, (0, 150, 720, 800), similarity=0.75) > 0.75:
+            if self.appear_interval_ready(BACK_ARROW, interval=3):
+                logger.info('重启后回到了活动页面，按左下返回')
+                self.device.click(BACK_ARROW)
+            return True
+        return False
 
     def app_restart(self):
         logger.hr('App restart', level=1)

@@ -188,6 +188,10 @@ class ZjcsAutoScript:
         from module.guild.guild import GuildRaid
         return GuildRaid(self.config, device=self.device).run()
 
+    def fenek_puzzle(self):
+        from module.fenek.fenek import FenekPuzzle
+        return FenekPuzzle(self.config, device=self.device).run()
+
     def daily_reward(self):
         from module.reward.reward import DailyReward
         return DailyReward(self.config, device=self.device).run()

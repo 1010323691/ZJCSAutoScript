@@ -260,6 +260,7 @@
     ['笔记', ['DailyDungeon', 'BondAdventure', 'FateFruit', 'Arena', 'MaterialRealm']],
     ['每日活动', ['HolyBeastTrial', 'TwinShadow']],
     ['公会', ['GuildIdleReward', 'GuildDonate', 'GuildWar', 'GuildRaid']],
+    ['限时活动', ['FenekPuzzle']],
     ['领取奖励', ['DailyReward']],
   ];
   const SETTINGS = ['Scheduler', 'Notify', 'Device'];
@@ -405,6 +406,10 @@
         return n > 0 ? '打 ' + n + ' 次，开战后马上返回，后台结算' : '不打';
       },
       panel: raidPanel,
+    },
+    FenekPuzzle: {
+      sentence: () => '从当前关打到打不动为止，不用黄金甲虫',
+      panel: () => info([h('p', { class: 'plain' }, '精彩活动 → 菲涅克的谜题：音符晶灯听旋律再按顺序敲晶石柱，元素链接自动连线铺满棋盘，石板谜题算出一笔点亮的路线再一格一格走，18 关都能解。只领每关的通关奖励，不点菲涅克的「帮我解谜」（要供奉黄金甲虫）。')]),
     },
     DailyReward: {
       sentence() {

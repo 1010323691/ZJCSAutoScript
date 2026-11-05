@@ -134,6 +134,11 @@ GuildRaid:
   Enable: {type: checkbox, value: false, name: 启用}
   Challenges: {type: number, value: 2, name: 挑战次数, help: 开始战斗后立刻返回，战斗在后台结算}
 
+FenekPuzzle:
+  _name: 菲涅克的谜题
+  _menu: 限时活动
+  Enable: {type: checkbox, value: false, name: 启用, help: 精彩活动 → 菲涅克的谜题，从当前关打到打不动为止；不用黄金甲虫（菲涅克帮忙解谜），只领每关的通关奖励}
+
 DailyReward:
   _name: 领取奖励
   _menu: 领取奖励

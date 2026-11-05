@@ -28,6 +28,7 @@ TASK_ORDER = [
     'GuildDonate',
     'GuildWar',
     'GuildRaid',
+    'FenekPuzzle',
     'DailyReward',
 ]
 
