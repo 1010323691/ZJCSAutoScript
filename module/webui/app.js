@@ -36,6 +36,20 @@
     arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
     down: '<path d="M12 5v14M6 13l6 6 6-6"/>',
     x: '<path d="M6 6l12 12M18 6L6 18"/>',
+    dock: '<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M15 4v16"/><path d="M17.5 8.5h1M17.5 11h1"/>',
+    expand: '<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>',
+    max: '<rect x="5.5" y="5.5" width="13" height="13" rx="1.5"/>',
+    min: '<path d="M5 12h14"/>',
+    search: '<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/>',
+    info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6h.01"/>',
+    inbox: '<path d="M3 13.5l2.6-7.2A2 2 0 0 1 7.5 5h9a2 2 0 0 1 1.9 1.3l2.6 7.2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 13.5h5l1.5 2.5h5l1.5-2.5h5"/>',
+    logs: '<rect x="3.5" y="3.5" width="17" height="17" rx="3"/><path d="M8 8.5h.01M11 8.5h5M8 12h.01M11 12h5M8 15.5h.01M11 15.5h5"/>',
+    keyboard: '<rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 9.5h.01M9.5 9.5h.01M13 9.5h.01M16.5 9.5h.01M7 14.5h10"/>',
+  };
+  // 实心图标（运行按钮用）
+  const FILLED = {
+    play: '<path d="M7.5 5.2v13.6a.8.8 0 0 0 1.2.7l11-6.8a.8.8 0 0 0 0-1.4l-11-6.8a.8.8 0 0 0-1.2.7z"/>',
+    stop: '<rect x="6" y="6" width="12" height="12" rx="2.2"/>',
   };
   const bindings = [];
 
@@ -48,11 +62,15 @@
     if (name === 'diamond') {
       svg.setAttribute('viewBox', '0 0 16 16');
       svg.innerHTML = '<path d="M8 1 15 8 8 15 1 8Z" fill="currentColor"/>';
+    } else if (FILLED[name]) {
+      svg.setAttribute('viewBox', '0 0 24 24');
+      svg.setAttribute('fill', 'currentColor');
+      svg.innerHTML = FILLED[name];
     } else {
       svg.setAttribute('viewBox', '0 0 24 24');
       svg.setAttribute('fill', 'none');
       svg.setAttribute('stroke', 'currentColor');
-      svg.setAttribute('stroke-width', name === 'minus' || name === 'plus' || name === 'check' ? '2.4' : '2');
+      svg.setAttribute('stroke-width', name === 'minus' || name === 'plus' || name === 'check' ? '2.2' : '1.8');
       svg.setAttribute('stroke-linecap', 'round');
       svg.setAttribute('stroke-linejoin', 'round');
       svg.innerHTML = ICONS[name];
@@ -117,14 +135,17 @@
     return el;
   }
 
-  /** 把卡片滚到屏幕中间。有的浏览器环境不执行平滑滚动，半秒后没动就直接跳过去 */
-  function scrollToCard(el) {
-    const top = () => Math.max(0, window.scrollY + el.getBoundingClientRect().top - (window.innerHeight - Math.min(el.offsetHeight, window.innerHeight - 120)) / 2);
-    const start = window.scrollY;
-    window.scrollTo({ top: top(), behavior: 'smooth' });
+  /** 把卡片滚进它所在的滚动区（页面本身不滚，各页在内嵌面板里滚动），再闪一下 */
+  function scrollToCard(el, block = 'center') {
+    el.scrollIntoView({ behavior: 'smooth', block });
+    // 有的浏览器环境不执行平滑滚动，半秒后还不在视野里就直接跳过去
     setTimeout(() => {
-      if (window.scrollY === start && Math.abs(top() - start) > 4) window.scrollTo({ top: top(), behavior: 'instant' });
+      const r = el.getBoundingClientRect();
+      if (r.top < 0 || r.top > window.innerHeight - 40) el.scrollIntoView({ block });
     }, 500);
+    el.classList.remove('flash');
+    void el.offsetWidth;
+    el.classList.add('flash');
   }
 
   function bump(el) {
@@ -518,7 +539,7 @@
     const rt = () => get('GeneralShop', 'RefreshTimes');
     return [
       field('一键购买几折以内的限购商品？',
-        h('div', { class: 'seg', role: 'group', 'aria-label': '一键购买折扣' }, DISCOUNTS.map((d, i) =>
+        h('div', { class: 'seg accent', role: 'group', 'aria-label': '一键购买折扣' }, DISCOUNTS.map((d, i) =>
           h('button', {
             type: 'button',
             class: () => (i < disc() ? 'covered' : ''),
@@ -762,7 +783,7 @@
 
   function devicePanel() {
     return [
-      h('p', { class: 'plain', style: { color: 'var(--ink2)' } }, '换模拟器或者换电脑时才需要改这里。'),
+      h('p', { class: 'plain' }, '换模拟器或者换电脑时才需要改这里。'),
       h('div', { class: 'cols' },
         h('label', { class: 'lf' }, '设备序列号', textInput('Device', 'Serial'), errorLine('Device_Serial'), h('span', { class: 'hint' }, S.arg.Device.Serial.help)),
         h('label', { class: 'lf' }, '游戏包名', textInput('Device', 'PackageName'), errorLine('Device_PackageName'))),
@@ -859,9 +880,11 @@
     });
   }
 
-  // ---------- 任务卡片和分组 ----------
+  // ---------- 任务卡片和分组（每天的路线） ----------
+  const specOf = (g) => SPEC[g] || { sentence: () => (S.arg[g].Enable && S.arg[g].Enable.help) || '', panel: () => genericPanel(g) };
+
   function taskCard(g) {
-    const spec = SPEC[g] || { sentence: () => (S.arg[g].Enable && S.arg[g].Enable.help) || '', panel: () => genericPanel(g) };
+    const spec = specOf(g);
     const name = S.arg[g]._name || g;
     const noSwitch = !('Enable' in S.cfg[g]);
     const on = () => noSwitch || isOn(g);
@@ -869,7 +892,7 @@
     const panelId = 'panel-' + g;
     const head = h('div', { class: 'card-head' },
       noSwitch
-        ? h('span', { class: 'switch-slot', 'aria-hidden': 'true' }, icon(spec.icon || 'sliders', 22))
+        ? h('span', { class: 'switch-slot', 'aria-hidden': 'true' }, icon(spec.icon || 'sliders', 18))
         : h('button', { type: 'button', class: 'switch-slot', role: 'switch', 'aria-label': name, 'aria-checked': () => String(on()), onclick: () => set(g, 'Enable', !on()) }, h('span', { class: 'switch' })),
       h('button', { type: 'button', class: 'row-btn', 'aria-expanded': () => String(open()), 'aria-controls': panelId, onclick: () => toggleOpen(g) },
         h('span', { class: 'row-text' },
@@ -877,16 +900,16 @@
             h('span', { class: 'row-name' }, name),
             h('span', { class: 'badge', show: () => changed(g) && !groupHasError(g) }, '已修改'),
             h('span', { class: 'badge error', show: () => groupHasError(g) }, '需要改一下')),
-          h('span', { class: 'row-sentence' }, () => (on() ? spec.sentence() : isSetting(g) ? '已关闭' : '今天跳过这一项'))),
-        spec.cost ? h('span', { class: 'chip-cost', show: () => on() && !!spec.cost() }, icon('diamond', 11), h('span', null, () => spec.cost() || '')) : null,
-        icon('chev', 20, 'chev')));
-    const inner = h('div', { class: 'panel-inner' },
+          h('span', { class: 'row-sentence' }, () => (on() ? spec.sentence() : '今天跳过这一项'))),
+        spec.cost ? h('span', { class: 'chip-cost', show: () => on() && !!spec.cost() }, icon('diamond', 10), h('span', null, () => spec.cost() || '')) : null,
+        icon('chev', 18, 'chev')));
+    const inner = h('div', { class: 'card-inner' },
       spec.panel(),
-      h('div', { class: 'reset-row', show: () => canReset(g) }, h('button', { type: 'button', class: 'btn', onclick: () => reset(g) }, '恢复这一项的默认设置')));
+      h('div', { class: 'reset-row', show: () => canReset(g) }, h('button', { type: 'button', class: 'btn btn-sm', onclick: () => reset(g) }, '恢复这一项的默认设置')));
     return h('div', {
       class: () => 'card' + (open() ? ' open' : '') + (on() ? '' : ' off') + (groupHasError(g) ? ' has-error' : ''),
       id: 'task-' + g,
-    }, head, h('div', { class: 'panel', id: panelId, role: 'region', 'aria-label': name + '的细节', inert: () => !open() }, h('div', { class: 'panel-clip' }, inner)));
+    }, head, h('div', { class: 'card-panel', id: panelId, role: 'region', 'aria-label': name + '的细节', inert: () => !open() }, h('div', { class: 'card-clip' }, inner)));
   }
 
   function routeGroup(index, title, tasks, last) {
@@ -902,15 +925,7 @@
         ids.map(taskCard)));
   }
 
-  function settingsGroup(ids) {
-    return h('section', { class: 'group', 'aria-label': '运行设置' },
-      h('div', { class: 'rail', 'aria-hidden': 'true' }, h('span', { class: 'node' }, icon('sliders', 16))),
-      h('div', { class: 'group-body', style: { 'padding-bottom': '0' } },
-        h('div', { class: 'group-head' }, h('h2', null, '运行设置'), h('span', { class: 'group-count' }, '一般不用改')),
-        ids.map(taskCard)));
-  }
-
-  // ---------- 右侧概览 ----------
+  // ---------- 改动统计、晨星花费 ----------
   function derive() {
     let changes = 0;
     Object.keys(S.cfg).forEach((g) => Object.keys(S.cfg[g]).forEach((k) => {
@@ -935,20 +950,28 @@
     D = { changes, costs, total, more, enabled: tasks.filter(isOn).length, tasks: tasks.length, pageChanges };
   }
 
+  /** 跳到某一项：路线上的展开卡片，设置里的直接滚过去，再闪一下 */
+  function jumpTo(g) {
+    const toSettings = isSetting(g);
+    if (!toSettings) toggleOpen(g, true);
+    go(toSettings ? 'settings' : 'route');
+    setTimeout(() => {
+      const el = document.getElementById('task-' + g);
+      if (el) scrollToCard(el, toSettings ? 'start' : 'center');
+    }, 80);
+  }
+
+  // ---------- 路线页右栏：概览 ----------
   function overview() {
-    const totalEl = h('span', { class: 'big' }, '0');
+    const totalEl = h('span', { class: 'big gold' }, '0');
     let shown = null;
     let raf = 0;
     let finish = 0;
     bindings.push(() => {
       const target = D.total;
       const suffix = D.more ? '+' : '';
-      if (shown === null) {
+      if (shown === null || shown === target) {
         shown = target;
-        totalEl.textContent = fmt(target) + suffix;
-        return;
-      }
-      if (shown === target) {
         totalEl.textContent = fmt(target) + suffix;
         return;
       }
@@ -957,8 +980,7 @@
       const start = performance.now();
       const step = (now) => {
         const p = Math.min(1, (now - start) / 420);
-        const eased = 1 - Math.pow(1 - p, 3);
-        shown = Math.round(from + (target - from) * eased);
+        shown = Math.round(from + (target - from) * (1 - Math.pow(1 - p, 3)));
         totalEl.textContent = fmt(shown) + (p === 1 ? suffix : '');
         if (p < 1) raf = requestAnimationFrame(step);
       };
@@ -1003,33 +1025,21 @@
       });
     });
 
-    const jumpToScheduler = () => {
-      go('settings');
-      toggleOpen('Scheduler', true);
-      const card = document.getElementById('task-Scheduler');
-      setTimeout(() => {
-        scrollToCard(card);
-        card.classList.remove('flash');
-        void card.offsetWidth;
-        card.classList.add('flash');
-      }, 60);
-    };
-
     const never = ['抽卡、扭蛋和结缘卡池', '幸运刮刮乐、惊吓南瓜', '任何付费按钮和礼包', '删除信件、用加速道具', '羁绊冒险的「挑战」'];
-    return h('aside', { class: 'aside', 'aria-label': '概览' },
-      has('Scheduler') ? h('div', { class: 'ocard' },
-        h('h2', null, icon('clock', 18), '什么时候跑'),
-        h('span', { class: 'big' }, () => '每天 ' + localTime(get('Scheduler', 'ServerUpdate'), get('Scheduler', 'ServerTimezone'))),
+    return h('aside', { class: 'overview', 'aria-label': '概览' },
+      has('Scheduler') ? h('div', { class: 'block' },
+        h('h2', null, icon('clock', 16), '什么时候跑'),
+        h('div', { class: 'big-row' }, h('span', null, '每天'), h('span', { class: 'big' }, () => localTime(get('Scheduler', 'ServerUpdate'), get('Scheduler', 'ServerTimezone')))),
         h('p', null, () => '游戏在服务器时间 ' + get('Scheduler', 'ServerUpdate') + ' 刷新，刷新后自动开始。公会战没开放时，等到 11:01 再跑。'),
-        h('div', { class: 'btn-row', style: { 'padding-top': '4px' } }, h('button', { type: 'button', class: 'btn', onclick: jumpToScheduler }, '改时间'))) : null,
-      h('div', { class: 'ocard' },
-        h('h2', null, icon('diamond', 16, 'spend'), '每天最多花多少晨星'),
+        h('button', { type: 'button', class: 'btn btn-sm', onclick: () => jumpTo('Scheduler') }, '改时间')) : null,
+      h('div', { class: 'block' },
+        h('h2', null, icon('diamond', 12, 'gem'), '每天最多花多少晨星'),
         h('div', { class: 'big-row' }, totalEl, h('span', null, '晨星')),
         costList,
         h('p', { class: 'hint' }, '宝库按商品标价另算；羁绊刷新只在委派品质不够时才花。改了设置，这里马上跟着变。')),
-      h('div', { class: 'ocard' },
-        h('h2', null, icon('shield', 18, 'safe'), '不管怎么设置，都不会做'),
-        h('ul', { class: 'never' }, never.map((t) => h('li', null, icon('ban', 16), h('span', null, t))))));
+      h('div', { class: 'block' },
+        h('h2', null, icon('shield', 16, 'safe'), '不管怎么设置，都不会做'),
+        h('ul', { class: 'never' }, never.map((t) => h('li', null, icon('ban', 14), h('span', null, t))))));
   }
 
   // ---------- 深浅色：跟随系统 / 浅色 / 深色，选择记在 localStorage ----------
@@ -1048,7 +1058,7 @@
     if (animate) {
       root.classList.add('theme-switching');
       clearTimeout(themeTimer);
-      themeTimer = setTimeout(() => root.classList.remove('theme-switching'), 450);
+      themeTimer = setTimeout(() => root.classList.remove('theme-switching'), 400);
     }
     root.setAttribute('data-theme', dark ? 'dark' : 'light');
   }
@@ -1063,28 +1073,102 @@
     toast(mode === 'auto' ? '外观跟随系统' + (darkQuery.matches ? '（现在是深色）' : '（现在是浅色）') : '已切到' + (mode === 'dark' ? '深色' : '浅色'));
   }
 
-  darkQuery.addEventListener('change', () => { if (themeMode === 'auto') applyTheme(true); });
+  darkQuery.addEventListener('change', () => { if (themeMode === 'auto') { applyTheme(true); refresh(); } });
   applyTheme(false);
+  const isDark = () => document.documentElement.getAttribute('data-theme') === 'dark';
 
-  function themeSwitch() {
-    return h('div', { class: 'theme-seg', role: 'group', 'aria-label': '外观' }, THEMES.map(([mode, ic, label]) =>
-      h('button', { type: 'button', title: label, 'aria-label': label, 'aria-pressed': () => String(themeMode === mode), onclick: () => setTheme(mode) }, icon(ic, 18))));
+  function themeSeg() {
+    return h('div', { class: 'seg', role: 'group', 'aria-label': '外观' }, THEMES.map(([mode, ic, label]) =>
+      h('button', { type: 'button', 'aria-pressed': () => String(themeMode === mode), onclick: () => setTheme(mode), style: { display: 'inline-flex', 'align-items': 'center', gap: '6px' } }, icon(ic, 14), label)));
+  }
+
+  // ---------- 桌面壳：窗口按钮、拖动、迷你模式 ----------
+  // 新版桌面壳（main.rs）提供 desktop_info / window_action 两个命令；浏览器和旧版桌面壳没有，页面照常用，只是缩不了窗口
+  const DESK = { ok: false, platform: '', frameless: false };
+  const tauri = () => window.__TAURI_INTERNALS__;
+
+  async function initDesktop() {
+    const T = tauri();
+    if (!T || typeof T.invoke !== 'function') return null;
+    try {
+      // 旧版桌面壳没有这个命令，会直接拒绝；万一一直不回，1.5 秒后当作没有，免得页面卡在「正在读取配置」
+      const info = await Promise.race([T.invoke('desktop_info'), new Promise((_, no) => setTimeout(() => no(new Error('timeout')), 1500))]);
+      DESK.ok = true;
+      DESK.platform = info.platform;
+      DESK.frameless = !!info.frameless;
+      const root = document.documentElement;
+      root.classList.add('desk');
+      root.classList.toggle('desk-mac', info.platform === 'macos');
+      root.classList.toggle('desk-frameless', DESK.frameless);
+      return info;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function winAction(action) {
+    if (!DESK.ok) return Promise.resolve(false);
+    return tauri().invoke('window_action', { action }).then(() => true, () => false);
+  }
+
+  // 顶栏、侧栏标题、迷你模式顶条可以拖动窗口。照 Tauri 自带的拖动区（drag.js）：按下时 preventDefault，
+  // 不然 WebKit 自己开始选字，窗口拖不动；双击最大化/还原，Mac 上在第二次松开、且鼠标没动时才做（和系统一致）
+  const inDrag = (e) => !!e.target.closest('.drag') && !e.target.closest('button, a, input, select, textarea, label, summary, [role="switch"], .nodrag');
+  let dblAt = null;
+  document.addEventListener('mousedown', (e) => {
+    if (!DESK.ok || e.button !== 0 || (e.detail !== 1 && e.detail !== 2) || !inDrag(e)) return;
+    if (DESK.platform === 'macos' && e.detail === 2) {
+      dblAt = [e.clientX, e.clientY];
+      return;
+    }
+    e.preventDefault();
+    winAction(e.detail === 2 ? 'max' : 'drag');
+  });
+  document.addEventListener('mouseup', (e) => {
+    if (!dblAt || e.button !== 0) return;
+    const [x, y] = dblAt;
+    dblAt = null;
+    if (e.detail === 2 && e.clientX === x && e.clientY === y && inDrag(e)) winAction('max');
+  });
+
+  function winctl() {
+    const b = (action, title, ic, cls) => h('button', { type: 'button', class: cls || null, title, 'aria-label': title, onclick: () => winAction(action) }, icon(ic, 15));
+    return h('div', { class: 'winctl' }, b('min', '最小化', 'min'), b('max', '最大化', 'max'), b('close', '关闭', 'x', 'close'));
+  }
+
+  let compact = false;
+  async function setCompact(on) {
+    compact = on;
+    RM.open = '';
+    document.body.classList.toggle('compact', on);
+    refresh();
+    const resized = await winAction(on ? 'compact' : 'full');
+    if (on && !resized) toast(DESK.ok ? '没能缩小窗口，先切成了窄条布局' : '这里只切换成窄条布局，窗口大小不变（用新版桌面壳打开会贴到屏幕右侧）');
+    if (on) {
+      pollLive(true);
+      loadScreen();
+    }
+    requestAnimationFrame(() => {
+      if (on) miniBox.scrollTop = miniBox.scrollHeight;
+      else if (LIVE.stick) liveBox.scrollTop = liveBox.scrollHeight;
+    });
   }
 
   // ---------- 页面切换：地址栏 #/run 这样记住当前页，刷新后还在这一页 ----------
   const PAGES = [
-    ['run', '运行', 'activity'],
-    ['route', '每天的路线', 'route'],
-    ['events', '活动', 'flag'],
-    ['tools', '工具', 'tool'],
-    ['logs', '日志', 'file'],
-    ['settings', '设置', 'gear'],
+    ['run', '运行', 'activity', '启动后先跑已到期的任务，然后常驻，每天刷新后自动再跑一遍'],
+    ['route', '每天的路线', 'route', '按顺序一项一项做：开关决定今天做不做，点开一项看它怎么做、改细节'],
+    ['events', '活动', 'flag', '限时活动的任务放这里，和每天的路线分开'],
+    ['tools', '工具', 'tool', '只在你点的时候跑一次的功能，不进每天的调度'],
+    ['logs', '日志', 'file', '脚本每一步都记在这里，出错时自动保存最近 10 张截图'],
+    ['settings', '设置', 'gear', '什么时候跑、出事怎么提醒你、连哪台模拟器，一般设一次就不用再动'],
   ];
   const pageFromHash = () => {
     const p = location.hash.replace(/^#\/?/, '');
     return PAGES.some((x) => x[0] === p) ? p : 'run';
   };
   let page = pageFromHash();
+  const pageInfo = () => PAGES.find((x) => x[0] === page);
 
   function go(p) {
     if (pageFromHash() !== p) location.hash = '#/' + p;
@@ -1093,11 +1177,14 @@
 
   function showPage(p) {
     page = p;
-    document.documentElement.classList.toggle('fit-page', p === 'run');
+    RM.open = '';
     refresh();
-    window.scrollTo({ top: 0, behavior: 'instant' });
     if (p === 'logs') loadLogs();
-    if (p === 'run') { pollLive(true); loadScreen(); }
+    if (p === 'run') {
+      pollLive(true);
+      loadScreen();
+      requestAnimationFrame(() => { if (LIVE.stick) liveBox.scrollTop = liveBox.scrollHeight; });
+    }
   }
   window.addEventListener('hashchange', () => { if (S) showPage(pageFromHash()); });
 
@@ -1126,6 +1213,7 @@
     return (d.getMonth() + 1) + '月' + d.getDate() + '日';
   }
   const when = (iso) => { const d = new Date(iso); return dayLabel(d) + ' ' + hm(d); };
+  const shortWhen = (iso) => { const d = new Date(iso); const l = dayLabel(d); return l === '今天' ? hm(d) : l === '明天' ? '明天 ' + hm(d) : l; };
   function clock(ms) {
     const s = Math.max(0, Math.floor(ms / 1000));
     const m = Math.floor(s / 60);
@@ -1140,8 +1228,26 @@
   const RESULT = { success: ['完成', 'ok'], skip: ['跳过', 'mute'], failed: ['失败', 'bad'], error: ['出错', 'bad'], human: ['停下', 'bad'] };
   const EXIT = { done: '到期的任务都跑完了', empty: '没有开着的任务', task: '单独跑的任务结束了', stopped: '按了停止', human: '需要你处理', error: '脚本出错', killed: '进程意外结束' };
 
+  function emptyEl(ic, title, sub) {
+    return h('div', { class: 'empty' }, icon(ic, 36), h('b', null, title), sub ? h('span', null, sub) : null);
+  }
+
+  // 级别图标：日志行和提示条共用
+  const LV_SVG = {
+    ok: '<path d="M4.2 8.3l2.5 2.5 5-5.1" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>',
+    warn: '<path d="M8 4.2v4.6M8 11.6h.01" stroke="#fff" stroke-width="2" stroke-linecap="round" fill="none"/>',
+    err: '<path d="M5.2 5.2l5.6 5.6M10.8 5.2l-5.6 5.6" stroke="#fff" stroke-width="2" stroke-linecap="round" fill="none"/>',
+    start: '<path d="M5 3.6v8.8l7-4.4z" fill="#fff"/>',
+  };
+  function lvIcon(lv, title) {
+    const el = h('span', { class: 'lvi ' + lv, title: title || null });
+    if (LV_SVG[lv]) el.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true">' + LV_SVG[lv] + '</svg>';
+    return el;
+  }
+
   // ---------- 运行状态 ----------
   const R = { status: null, busy: '', lastAlive: null, confirm: new Map(), offline: false };
+  const RM = { open: '' };   // 运行按钮旁的下拉菜单开在哪个按钮上
   const nameOf = (task) => (S.arg[task] && S.arg[task]._name) || task;
 
   function runState() {
@@ -1157,16 +1263,42 @@
     return { kind: 'stopped', exit: rt.exit, message: rt.message, ended: rt.ended };
   }
 
-  function stateText() {
+  /** 状态胶囊、侧栏徽标、状态说明都从这里取 */
+  function runInfo() {
     const s = runState();
-    if (s.kind === 'running') return ['正在跑 · ' + nameOf(s.task), 'live'];
-    if (s.kind === 'waiting') return [s.next ? '等下一次 · ' + when(s.next) : '等下一次', 'wait'];
-    if (s.kind === 'stopping') return [s.task ? '做完「' + nameOf(s.task) + '」就停' : '正在停止', 'wait'];
-    if (s.kind === 'starting') return ['正在启动', 'live'];
-    if (s.kind === 'stopped' && (s.exit === 'human' || s.exit === 'error' || s.exit === 'killed')) return ['停下了 · ' + EXIT[s.exit], 'bad'];
-    if (s.kind === 'stopped') return ['没在运行', 'idle'];
-    return [R.offline ? '连不上配置服务' : '读取中…', 'idle'];
+    if (R.offline) return { pill: '连不上', cls: 'bad', badge: '连不上', meta: '连不上配置服务，看看 gui.py 是不是关了' };
+    if (s.kind === 'running') return { pill: '正在跑', cls: 'live', badge: '运行中', meta: '当前：' + nameOf(s.task) + (s.since ? ' · ' + hm(new Date(s.since)) + ' 开始' : '') };
+    if (s.kind === 'starting') return { pill: '正在启动', cls: 'live', badge: '运行中', meta: '正在连接模拟器…' };
+    if (s.kind === 'waiting') return { pill: '等下一次', cls: 'wait', badge: '等待中', meta: s.next ? '下一次：' + when(s.next) : '常驻中，到点自动继续' };
+    if (s.kind === 'stopping') return { pill: '正在停止', cls: 'warn', badge: '停止中', meta: s.task ? '做完「' + nameOf(s.task) + '」就停' : '马上停止' };
+    if (s.kind === 'stopped') {
+      const bad = ['human', 'error', 'killed'].includes(s.exit);
+      const end = s.ended ? when(s.ended) + ' ' : '';
+      return { pill: bad ? '停下了' : '没在运行', cls: bad ? 'bad' : 'idle', badge: bad ? '停下了' : '', bad, meta: s.exit ? end + (bad ? '停下：' : '结束：') + (s.message || EXIT[s.exit]) : '还没启动过' };
+    }
+    return { pill: '读取中', cls: 'idle', badge: '', meta: '正在读取运行状态…' };
   }
+
+  /** 状态下面那段说明：现在在做什么、点按钮会怎样 */
+  function runDetail() {
+    const s = runState();
+    if (R.offline) return '配置服务没有响应。确认 gui.py 正在运行；脚本本身不受影响，照常在后台跑。';
+    if (s.kind === 'running') return '做完会接着跑排队中的任务。停止会等这一项做完，不会卡在买到一半、打到一半。';
+    if (s.kind === 'waiting') return '今天到期的都跑完了。脚本开着，到点会自己继续；这期间点「立即执行」会马上跑。';
+    if (s.kind === 'stopping') return '当前任务做完就停。等不及可以强制停止，正在做的任务会中断，下次从主界面重新进入。';
+    if (s.kind === 'starting') return '正在连接模拟器…';
+    if (s.kind === 'stopped' && ['human', 'error', 'killed'].includes(s.exit)) return (s.message || EXIT[s.exit]) + '。处理好之后点「启动」继续；出错前的截图在「日志 → 错误截图」。';
+    return '点「启动」会先跑已到期的任务，然后常驻等下一次刷新。关掉这个窗口，脚本照样在后台跑。';
+  }
+
+  const todayCounts = () => {
+    const hs = (R.status && R.status.history) || [];
+    return {
+      success: hs.filter((r) => r.result === 'success').length,
+      skip: hs.filter((r) => r.result === 'skip').length,
+      failed: hs.filter((r) => ['failed', 'error', 'human'].includes(r.result)).length,
+    };
+  };
 
   async function pollStatus() {
     try {
@@ -1178,12 +1310,12 @@
       R.offline = true;
     }
     const alive = !!(R.status && R.status.runtime.alive);
-    if (R.lastAlive === true && !alive) {
+    if (R.lastAlive === true && !alive && !R.offline) {
       const s = runState();
       if (s.exit === 'human' || s.exit === 'error') toast('停下了：' + (s.message || EXIT[s.exit]), 'error');
       else toast('已停止：' + (EXIT[s.exit] || '已停止'));
     }
-    R.lastAlive = R.status ? alive : R.lastAlive;
+    if (!R.offline) R.lastAlive = R.status ? alive : R.lastAlive;
     refresh();
   }
 
@@ -1234,259 +1366,66 @@
     await pollStatus();
   }
 
-  function runControls(big) {
-    const busy = (k) => () => String(R.busy === k);
-    const kind = () => runState().kind;
+  // ---------- 运行按钮：启动 / 做完这项就停（下拉里有强制停止）/ 强制停止 ----------
+  function runMode() {
+    if (R.offline) return 'off';
+    const k = runState().kind;
     // 命令行 --task 单独跑的任务不接收停止指令，只给强制停止
-    const single = () => !!(R.status && R.status.runtime.alive && R.status.runtime.mode === 'task');
-    const cls = big ? 'btn btn-lg' : 'btn';
-    return h('div', { class: 'run-ctl' },
-      h('button', { type: 'button', class: cls + ' btn-primary', show: () => ['stopped', 'unknown'].includes(kind()) && !R.offline, 'aria-busy': busy('start'), onclick: startRun },
-        h('span', { class: 'spinner', 'aria-hidden': 'true', show: () => R.busy === 'start' }), icon('play', 16), '启动'),
-      h('button', { type: 'button', class: cls, show: () => ['running', 'waiting', 'starting'].includes(kind()) && !single(), 'aria-busy': busy('stop'), onclick: () => stopRun(false), title: '当前任务做完再停，不会卡在买到一半、打到一半' },
-        icon('stop', 16), () => (kind() === 'running' ? '做完这项就停' : '停止')),
-      h('button', { type: 'button', class: cls + ' btn-danger', show: () => kind() === 'stopping' || (single() && ['running', 'starting'].includes(kind())), 'aria-busy': busy('force'), onclick: () => stopRun(true), title: '马上结束脚本进程，正在做的任务会中断' },
-        icon('x', 16), '强制停止'));
+    const single = !!(R.status && R.status.runtime.alive && R.status.runtime.mode === 'task');
+    if (k === 'stopped' || k === 'unknown') return 'start';
+    if (k === 'stopping' || single) return 'force';
+    return 'stop';
   }
 
-  function runChip() {
-    return h('div', { class: () => 'run-chip ' + stateText()[1], role: 'status' },
-      h('i', { 'aria-hidden': 'true' }),
-      h('span', null, () => stateText()[0]),
-      h('span', { class: 'chip-time', 'data-since': () => runState().since || '' }));
-  }
-
-  // ---------- 左侧导航 ----------
-  function navDot(id) {
-    if (id === 'run') return h('i', { class: () => 'nav-dot ' + stateText()[1], 'aria-hidden': 'true' });
-    if (id === 'route' || id === 'settings') return h('i', { class: 'nav-dot dirty', show: () => D.pageChanges[id] > 0, 'aria-hidden': 'true' });
-    return null;
-  }
-
-  function sidebar() {
-    const item = ([id, label, ic]) => h('a', {
-      href: '#/' + id,
-      class: () => 'nav-item' + (page === id ? ' on' : ''),
-      'aria-current': () => (page === id ? 'page' : null),
-    }, icon(ic, 19), h('span', null, label), navDot(id));
-    return h('nav', { class: 'side', 'aria-label': '页面' },
-      h('div', { class: 'brand' },
-        h('span', { class: 'brand-mark', 'aria-hidden': 'true' }, icon('route', 22)),
-        h('div', null, h('div', { class: 'brand-name' }, 'ZJCSAutoScript'), h('div', { class: 'brand-sub' }, '杖剑传说 · 每日自动化'))),
-      h('div', { class: 'side-nav' },
-        PAGES.slice(0, 4).map(item),
-        h('div', { class: 'side-label' }, '系统'),
-        PAGES.slice(4).map(item)),
-      h('div', { class: 'side-foot' }, h('span', { class: 'side-label' }, '外观'), themeSwitch()));
-  }
-
-  // ---------- 顶栏：运行状态和保存，每一页都在 ----------
-  function topbar() {
-    const saveBtn = h('button', {
-      type: 'button',
-      class: 'btn btn-primary',
-      'aria-busy': () => String(S.saving),
-      onclick: save,
-    }, () => (S.saving ? '' : '保存'));
-    const spinner = h('span', { class: 'spinner', 'aria-hidden': 'true', show: () => S.saving });
-    saveBtn.prepend(spinner);
-    bindings.push(() => {
-      if (S.saving) saveBtn.setAttribute('aria-label', '正在保存');
-      else saveBtn.removeAttribute('aria-label');
-    });
-    return h('header', { class: 'topbar' },
-      h('div', { class: 'top-run' }, runChip(), h('span', { show: () => page !== 'run', style: { display: 'contents' } }, runControls(false))),
-      h('div', { class: 'savebar' },
-        h('span', { class: 'status dirty', show: () => D.changes > 0 }, h('i', { 'aria-hidden': 'true' }), () => '有 ' + D.changes + ' 处改动还没保存'),
-        h('span', { class: 'status', show: () => D.changes === 0 && S.justSaved }, icon('check', 18), '已保存，下一项任务开始前生效'),
-        h('button', { type: 'button', class: 'btn', show: () => D.changes > 0, onclick: undo }, '撤销'),
-        h('span', { show: () => D.changes > 0, style: { display: 'contents' } }, saveBtn),
-        h('kbd', { class: 'kbd', show: () => D.changes > 0, title: '快捷键' }, 'Ctrl S')));
-  }
-
-  function pageHead(title, desc, ...extra) {
-    return h('div', { class: 'page-head' }, h('div', null, h('h1', null, title), desc ? h('p', null, desc) : null), ...extra);
-  }
-
-  // ---------- 运行页 ----------
-  function queueModel() {
-    const st = R.status;
-    const now = new Date(st.now);
-    const running = st.runtime.alive ? st.runtime.task : null;
-    const rest = st.tasks.filter((t) => t.task !== running);
-    const first = rest.filter((t) => t.run_now).sort((a, b) => String(a.run_now).localeCompare(String(b.run_now)));
-    const due = rest.filter((t) => t.enabled && !t.run_now && (!t.next_run || new Date(t.next_run) <= now));
-    const waiting = rest.filter((t) => t.enabled && !t.run_now && t.next_run && new Date(t.next_run) > now)
-      .sort((a, b) => new Date(a.next_run) - new Date(b.next_run));
-    const off = rest.filter((t) => !t.enabled && !t.run_now);
-    return { running: running ? st.tasks.find((t) => t.task === running) || { task: running, name: nameOf(running) } : null, queue: first.concat(due), waiting, off };
-  }
-
-  function lastResult(t) {
-    if (!t.last_run) return null;
-    const [label, cls] = RESULT[t.result] || ['跑过', 'mute'];
-    const fail = t.result === 'failed' && t.failure ? '（连续 ' + t.failure + ' 次）' : '';
-    return h('span', { class: 'res ' + cls }, when(t.last_run) + ' ' + label + fail);
-  }
-
-  function runButton(t, kind) {
-    if (t.run_now) return h('span', { class: 'tag' }, '已插队');
-    const c = R.confirm.get(t.task);
-    const confirming = c && Date.now() - c < 4000;
-    return h('button', { type: 'button', class: 'btn btn-sm' + (confirming ? ' confirm' : ''), onclick: () => runNow(t), title: kind === 'off' ? '开关没开也可以先跑一次试试' : '插到队首，当前任务做完马上跑' },
-      icon('play', 13), confirming ? '今天跑过了，再点一次确认' : kind === 'off' ? '试跑一次' : '立即执行');
-  }
-
-  function queueRow(t, kind) {
-    const alive = R.status.runtime.alive;
-    let meta = '';
-    if (kind === 'running') meta = '已经跑了 ';
-    else if (kind === 'queue') meta = t.run_now ? (alive ? '当前任务做完就跑' : '等脚本启动') : alive ? '排队中' : '已到期，启动后就跑';
-    else if (kind === 'waiting') meta = when(t.next_run) + ' 跑';
-    else meta = '开关没开';
-    return h('div', { class: 'q-item ' + kind },
-      h('div', { class: 'q-text' },
-        h('span', { class: 'q-name' }, t.name),
-        h('span', { class: 'q-meta' }, meta, kind === 'running' ? h('b', { 'data-since': R.status.runtime.task_started }) : null, kind !== 'running' ? lastResult(t) : null)),
-      kind === 'running' ? h('span', { class: 'pulse', 'aria-hidden': 'true' }) : runButton(t, kind));
-  }
-
-  function queueCard() {
-    const body = h('div', { class: 'q-body' });
-    let sig = '';
-    bindings.push(() => {
-      if (!R.status) return;
-      const m = queueModel();
-      const next = JSON.stringify([m, [...R.confirm.entries()].filter(([, v]) => Date.now() - v < 4000), Math.floor(Date.now() / 60000), R.status.runtime.alive]);
-      if (next === sig) return;
-      sig = next;
-      const sec = (title, list, kind, empty) => [
-        h('div', { class: 'q-sec' }, h('span', null, title), h('span', { class: 'q-count' }, String(list.length))),
-        list.length ? list.map((t) => queueRow(t, kind)) : h('div', { class: 'q-empty' }, empty),
-      ];
-      const groups = [];
-      m.waiting.forEach((t) => {
-        const label = dayLabel(new Date(t.next_run));
-        if (!groups.length || groups[groups.length - 1][0] !== label) groups.push([label, []]);
-        groups[groups.length - 1][1].push(t);
-      });
-      body.replaceChildren(...[
-        m.running ? sec('正在跑', [m.running], 'running', '') : [],
-        sec(R.status.runtime.alive ? '排队中' : '已到期', m.queue, 'queue', R.status.runtime.alive ? '没有排队的任务' : '没有到期的任务'),
-        groups.map(([label, list]) => sec(label === '今天' ? '今天晚些时候' : label, list, 'waiting', '')),
-        m.off.length ? h('details', { class: 'q-off' },
-          h('summary', null, h('span', null, '没开的任务'), h('span', { class: 'q-count' }, String(m.off.length)), icon('chev', 16, 'chev')),
-          m.off.map((t) => queueRow(t, 'off'))) : null,
-      ].flat(Infinity).filter(Boolean));
-      tickSince();
-    });
-    return h('section', { class: 'ocard q-card', 'aria-label': '任务队列' },
-      h('div', { class: 'card-title' }, h('h2', null, icon('route', 18), '任务队列'), h('span', { class: 'hint' }, '按路线顺序跑')),
-      body);
-  }
-
-  function heroCard() {
-    const counts = () => {
-      const hs = (R.status && R.status.history) || [];
-      return ['success', 'skip', 'failed'].map((k) => [k, hs.filter((r) => r.result === k || (k === 'failed' && (r.result === 'error' || r.result === 'human'))).length]);
+  function runButton(where, extraClass = '') {
+    const mode = () => runMode();
+    const text = () => {
+      if (R.busy === 'start') return '正在启动…';
+      if (R.busy === 'stop') return '正在停止…';
+      if (R.busy === 'force') return '正在结束…';
+      const m = mode();
+      if (m === 'start') return '启动';
+      if (m === 'force') return '强制停止';
+      if (m === 'off') return '连不上配置服务';
+      return runState().kind === 'running' ? '做完这项就停' : '停止';
     };
-    const detail = () => {
-      const s = runState();
-      if (s.kind === 'running') return '做完会接着跑排队中的任务。停止会等这一项做完，不会卡在买到一半、打到一半。';
-      if (s.kind === 'waiting') return '今天到期的都跑完了。脚本开着，到点会自己继续；这期间点「立即执行」会马上跑。';
-      if (s.kind === 'stopping') return '当前任务做完就停。等不及可以强制停止，正在做的任务会中断，下次从主界面重新进入。';
-      if (s.kind === 'starting') return '正在连接模拟器…';
-      if (s.kind === 'stopped') {
-        const end = s.ended ? when(s.ended) + ' 停下：' : '';
-        if (s.exit === 'human' || s.exit === 'error' || s.exit === 'killed') return end + (s.message || EXIT[s.exit]);
-        if (s.exit) return end + (s.message || EXIT[s.exit]) + '。点「启动」会先跑已到期的任务，然后常驻等下一次刷新。';
-        return '点「启动」会先跑已到期的任务，然后常驻等下一次刷新。关掉这个页面，脚本照样在后台跑。';
-      }
-      return '';
+    const main = () => {
+      const m = mode();
+      if (m === 'start') startRun();
+      else if (m === 'stop') stopRun(false);
+      else if (m === 'force') stopRun(true);
     };
-    const bad = () => ['human', 'error', 'killed'].includes(runState().exit) && runState().kind === 'stopped';
-    return h('section', { class: () => 'ocard hero' + (bad() ? ' bad' : '') },
-      h('div', { class: 'hero-main' },
-        h('div', { class: () => 'hero-state ' + stateText()[1] }, h('i', { 'aria-hidden': 'true' }), h('span', null, () => stateText()[0]), h('b', { class: 'chip-time', 'data-since': () => runState().since || '' })),
-        h('p', null, () => detail()),
-        h('div', { class: 'btn-row' }, runControls(true), h('a', { class: 'btn btn-lg btn-ghost', href: '#/logs', show: () => bad() }, '看日志'))),
-      h('div', { class: 'hero-stats', 'aria-label': '今天的结果' },
-        [['success', '完成'], ['skip', '跳过'], ['failed', '失败']].map(([k, label], i) =>
-          h('div', { class: 'stat ' + k }, h('b', null, () => String(counts()[i][1])), h('span', null, '今天' + label)))));
+    const cls = { start: '', stop: ' stop has-drop', force: ' stop', off: ' off' };
+    return h('div', { class: () => 'split-btn ' + extraClass + cls[mode()] + (R.busy ? ' busy' : '') },
+      h('button', {
+        type: 'button',
+        class: 'sb-main',
+        onclick: main,
+        title: () => ({ start: '先跑已到期的任务，然后常驻等下一次刷新', stop: '当前任务做完再停，不会卡在买到一半、打到一半', force: '马上结束脚本进程，正在做的任务会中断', off: '' }[mode()]),
+      },
+      h('span', { class: 'spinner', 'aria-hidden': 'true', show: () => !!R.busy }),
+      h('span', { show: () => !R.busy && mode() === 'start', style: { display: 'contents' } }, icon('play', 16)),
+      h('span', { show: () => !R.busy && mode() === 'stop', style: { display: 'contents' } }, icon('stop', 16)),
+      h('span', { show: () => !R.busy && mode() === 'force', style: { display: 'contents' } }, icon('x', 16)),
+      h('span', null, text)),
+      h('button', {
+        type: 'button',
+        class: 'sb-drop',
+        show: () => mode() === 'stop',
+        title: '更多停止方式',
+        'aria-label': '更多停止方式',
+        'aria-expanded': () => String(RM.open === where),
+        onclick: (e) => { e.stopPropagation(); RM.open = RM.open === where ? '' : where; refresh(); },
+      }, icon('chev', 16)),
+      h('div', { class: 'menu up', show: () => RM.open === where && mode() === 'stop' },
+        h('button', { type: 'button', class: 'danger', onclick: () => { RM.open = ''; stopRun(true); } },
+          icon('x', 16), h('span', { class: 'mi' }, '强制停止', h('small', null, '马上结束进程，正在做的任务会中断')))));
   }
+  document.addEventListener('click', () => { if (RM.open) { RM.open = ''; refresh(); } });
 
-  // 实时日志：每 1.5 秒从上次读到的位置接着读
-  const LIVE = { offset: -1, date: '', busy: false, onlyWarn: false, stick: true };
-  const LINE_RE = /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})\.\d{3} \| (\w+)\s*\| ?(.*)$/;
-  const LEVEL = { WARNING: ['警告', 'warn'], ERROR: ['错误', 'err'], CRITICAL: ['严重', 'err'] };
-
-  function logLines(text) {
-    const out = [];
-    text.split('\n').forEach((line) => {
-      const m = LINE_RE.exec(line);
-      if (m) out.push({ time: m[2], level: m[3], msg: m[4] });
-      else if (out.length) out[out.length - 1].msg += '\n' + line;
-      else if (line) out.push({ time: '', level: 'INFO', msg: line });
-    });
-    return out;
-  }
-
-  function lineEl(e) {
-    const [label, cls] = LEVEL[e.level] || ['', 'info'];
-    const sep = /^(={6,}|-{6,}|<<<)/.test(e.msg);
-    // 大标题上下的整行等号没有内容，不显示
-    if (sep && !e.msg.replace(/[=\-<>\s]/g, '')) return null;
-    return h('div', { class: 'll ' + cls + (sep ? ' sep' : '') }, h('span', { class: 'lt' }, e.time), h('span', { class: 'lv' }, label), h('span', { class: 'lm' }, sep ? e.msg.replace(/^[=\-<\s]+|[=\->\s]+$/g, '') : e.msg));
-  }
-
-  const liveBox = h('div', { class: 'logbox live', role: 'log', 'aria-live': 'off' });
-  liveBox.addEventListener('scroll', () => {
-    const stick = liveBox.scrollHeight - liveBox.scrollTop - liveBox.clientHeight < 40;
-    // 只有「回到最新」按钮要变的时候才刷新，滚轮一格会触发很多次 scroll
-    if (stick === LIVE.stick) return;
-    LIVE.stick = stick;
-    refresh();
-  }, { passive: true });
-
-  async function pollLive(force) {
-    if (LIVE.busy || (!force && (page !== 'run' || document.hidden))) return;
-    const d = new Date();
-    const today = d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
-    if (today !== LIVE.date) { LIVE.date = today; LIVE.offset = -1; }
-    LIVE.busy = true;
-    try {
-      const res = await fetch('/api/log?date=' + LIVE.date + '&offset=' + LIVE.offset + '&tail=400', { cache: 'no-store' });
-      const body = await res.json();
-      if (body.reset) liveBox.replaceChildren();
-      LIVE.offset = body.offset;
-      if (body.text) {
-        const frag = document.createDocumentFragment();
-        logLines(body.text).map(lineEl).filter(Boolean).forEach((el) => frag.appendChild(el));
-        liveBox.appendChild(frag);
-        while (liveBox.childElementCount > 1500) liveBox.firstElementChild.remove();
-        if (LIVE.stick) liveBox.scrollTop = liveBox.scrollHeight;
-      }
-    } catch (e) { /* 下一轮再试 */ } finally {
-      LIVE.busy = false;
-    }
-  }
-
-  function liveCard() {
-    return h('section', { class: 'ocard log-card', 'aria-label': '实时日志' },
-      h('div', { class: 'card-title' },
-        h('h2', null, icon('file', 18), '实时日志'),
-        h('div', { class: 'inline', style: { gap: '6px' } },
-          h('div', { class: 'mini-seg', role: 'group', 'aria-label': '显示哪些日志' },
-            h('button', { type: 'button', 'aria-pressed': () => String(!LIVE.onlyWarn), onclick: () => { LIVE.onlyWarn = false; refresh(); } }, '全部'),
-            h('button', { type: 'button', 'aria-pressed': () => String(LIVE.onlyWarn), onclick: () => { LIVE.onlyWarn = true; refresh(); } }, '只看警告')),
-          h('a', { class: 'btn btn-sm btn-ghost', href: '#/logs' }, '全部日志', icon('arrow', 14)))),
-      h('div', { class: () => 'log-wrap' + (LIVE.onlyWarn ? ' only-warn' : '') }, liveBox,
-        h('button', { type: 'button', class: 'to-latest', show: () => !LIVE.stick, onclick: () => { LIVE.stick = true; liveBox.scrollTop = liveBox.scrollHeight; refresh(); } }, icon('down', 14), '回到最新')));
-  }
-
-  // 模拟器画面：开着自动刷新时每 3 秒截一张
+  // ---------- 模拟器画面：运行页和迷你模式每 3 秒截一张，其他时候 30 秒一张（侧栏的连接状态用） ----------
   const SCREEN_KEY = 'zjcs.gui.screen';
-  const SC = { auto: true, url: '', time: null, error: '', busy: false };
+  const SC = { auto: true, url: '', time: null, error: '', busy: false, size: '' };
   try { SC.auto = localStorage.getItem(SCREEN_KEY) !== 'off'; } catch (e) { /* 默认开 */ }
 
   async function loadScreen() {
@@ -1512,35 +1451,404 @@
     }
   }
 
-  function screenCard() {
-    const setAuto = () => {
-      SC.auto = !SC.auto;
-      try { localStorage.setItem(SCREEN_KEY, SC.auto ? 'on' : 'off'); } catch (e) { /* 不记 */ }
-      if (SC.auto) loadScreen();
-      refresh();
+  function setScreenAuto() {
+    SC.auto = !SC.auto;
+    try { localStorage.setItem(SCREEN_KEY, SC.auto ? 'on' : 'off'); } catch (e) { /* 不记 */ }
+    if (SC.auto) loadScreen();
+    refresh();
+  }
+
+  function screenView() {
+    return h('div', { class: 'screen' },
+      h('img', { src: () => SC.url || null, alt: '模拟器当前画面', show: () => !!SC.url, onload: (e) => { SC.size = e.target.naturalWidth + '×' + e.target.naturalHeight; } }),
+      h('div', { class: 'screen-empty', show: () => !SC.url }, icon('image', 22), h('span', null, () => (SC.error ? '截不到图' : '正在截图…'))),
+      h('button', { type: 'button', class: () => 'screen-btn' + (SC.busy ? ' spinning' : ''), title: '现在刷新画面', 'aria-label': '现在刷新画面', onclick: loadScreen }, icon('refresh', 14)));
+  }
+
+  /** 模拟器连接状态：[色调, 文字]，侧栏卡片、运行按钮下的提示、迷你模式底栏共用 */
+  function deviceState() {
+    if (SC.url && !SC.error) return ['ok', '已连接 · ' + (SC.size || '画面正常') + (SC.time ? ' · ' + hms(SC.time) : '')];
+    if (SC.error) return ['bad', '截不到图：' + SC.error];
+    return ['', '正在检测…'];
+  }
+
+  function connCard() {
+    return h('button', {
+      type: 'button',
+      class: () => 'conn ' + deviceState()[0],
+      title: () => (S ? '设备 ' + get('Device', 'Serial') + '。' : '') + deviceState()[1] + '\n点一下去设置里检查连接',
+      onclick: () => jumpTo('Device'),
+    }, h('span', { class: 'conn-ic' }, icon('device', 18)),
+    h('span', { class: 'conn-text' }, h('b', null, '模拟器'), h('small', null, () => deviceState()[1])));
+  }
+
+  function footHint() {
+    const hint = () => {
+      const s = runState();
+      if (R.offline) return ['bad', '连不上配置服务'];
+      if (s.kind === 'running') return ['run', '正在跑「' + nameOf(s.task) + '」· 停止会等这一项做完'];
+      if (s.kind === 'starting') return ['run', '正在启动脚本…'];
+      if (s.kind === 'waiting') return ['ok', '常驻中 · 到点自动继续，关掉窗口也照样跑'];
+      if (s.kind === 'stopping') return ['warn', '当前任务做完就停'];
+      const [tone, text] = deviceState();
+      return [tone, '模拟器' + (tone === 'ok' ? '已连接 · ' + get('Device', 'Serial') : tone === 'bad' ? text : '：正在检测…')];
     };
-    return h('section', { class: 'ocard screen-card', 'aria-label': '模拟器画面' },
-      h('div', { class: 'card-title' }, h('h2', null, icon('image', 18), '模拟器画面'),
-        h('button', { type: 'button', class: () => 'icon-btn' + (SC.busy ? ' spinning' : ''), title: '现在刷新', 'aria-label': '现在刷新画面', onclick: loadScreen }, icon('refresh', 16))),
-      h('div', { class: 'screen' },
-        h('img', { src: () => SC.url || null, alt: '模拟器当前画面', show: () => !!SC.url }),
-        h('div', { class: 'screen-empty', show: () => !SC.url }, () => (SC.error ? '截不到图：' + SC.error : '正在截图…'))),
-      h('div', { class: 'screen-foot' },
-        h('span', { class: 'hint' }, () => (SC.error && SC.url ? '最新一张没截到：' + SC.error : SC.time ? hms(SC.time) + ' 的画面' : '')),
-        h('button', { type: 'button', role: 'switch', class: 'mini-switch', 'aria-checked': () => String(SC.auto), onclick: setAuto }, h('span', { class: 'switch' }), '自动刷新')));
+    return h('div', { class: () => 'foot-hint ' + hint()[0] }, h('span', { class: 'dot' }), h('span', { title: () => hint()[1] }, () => hint()[1]));
+  }
+
+  // ---------- 实时日志：每 1.5 秒从上次读到的位置接着读，运行页和迷你模式各一份 ----------
+  const LIVE = { offset: -1, date: '', busy: false, stick: true, level: 'all', kw: '' };
+  const MINI = { onlyWarn: false };
+  const LINE_RE = /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})\.\d{3} \| (\w+)\s*\| ?(.*)$/;
+  const LEVEL = { WARNING: ['警告', 'warn'], ERROR: ['错误', 'err'], CRITICAL: ['严重', 'err'] };
+  const UPPER = () => {
+    const map = {};
+    if (S) Object.keys(S.arg).forEach((g) => { map[g.toUpperCase()] = nameOf(g); });
+    return map;
+  };
+
+  function logLines(text) {
+    const out = [];
+    text.split('\n').forEach((line) => {
+      const m = LINE_RE.exec(line);
+      if (m) out.push({ time: m[2], level: m[3], msg: m[4] });
+      else if (out.length) out[out.length - 1].msg += '\n' + line;
+      else if (line) out.push({ time: '', level: 'INFO', msg: line });
+    });
+    return out;
+  }
+
+  /** 一行日志：任务开头（==== TASK ====）蓝色高亮，任务结果绿/红高亮，小节标题加粗 */
+  let upperCache = null;
+  function lineEl(e) {
+    const [label, lv] = LEVEL[e.level] || ['', 'info'];
+    let cls = lv;
+    let text = e.msg;
+    let ic = lv;
+    if (/^={6,}/.test(text)) {
+      const name = text.replace(/[=\s]+/g, ' ').trim();
+      if (!name) return null;
+      upperCache = upperCache || UPPER();
+      text = '开始：' + (upperCache[name] || name);
+      cls += ' start';
+      ic = 'start';
+    } else if (/^-{6,}/.test(text)) {
+      text = text.replace(/^[-\s]+|[-\s]+$/g, '');
+      cls += ' sub';
+    } else {
+      const m = /^任务 (\w+) 结果: (\w+)$/.exec(text);
+      if (m) {
+        const [rl, rc] = RESULT[m[2]] || [m[2], 'mute'];
+        text = '「' + nameOf(m[1]) + '」' + rl;
+        if (rc === 'ok') { cls = 'ok hl'; ic = 'ok'; }
+        if (rc === 'bad') { cls = 'err hl'; ic = 'err'; }
+      }
+    }
+    return h('div', { class: 'lrow ' + cls }, h('time', null, e.time), lvIcon(ic, label), h('div', { class: 'msg' }, text));
+  }
+
+  function rowVisible(el, level, kw) {
+    const isWarn = el.classList.contains('warn') || el.classList.contains('err');
+    const okLevel = level === 'all' || (level === 'warn' ? isWarn : el.classList.contains('err'));
+    return okLevel && (!kw || el.textContent.toLowerCase().includes(kw));
+  }
+
+  function filterBox(box, level, kw) {
+    let shown = 0;
+    [...box.children].forEach((el) => {
+      const ok = rowVisible(el, level, kw);
+      el.hidden = !ok;
+      if (ok) shown += 1;
+    });
+    return shown;
+  }
+
+  function appendLog(box, items, max, stick, keep) {
+    const frag = document.createDocumentFragment();
+    items.map(lineEl).filter(Boolean).forEach((el) => {
+      if (keep && !keep(el)) el.hidden = true;
+      frag.appendChild(el);
+    });
+    box.appendChild(frag);
+    while (box.childElementCount > max) box.firstElementChild.remove();
+    if (stick) box.scrollTop = box.scrollHeight;
+  }
+
+  const liveBox = h('div', { class: 'log', role: 'log', 'aria-live': 'off', 'data-empty': '今天还没有日志。点「启动」后，脚本的每一步都会实时显示在这里。' });
+  const miniBox = h('div', { class: 'mini-log log', role: 'log', 'aria-live': 'off', 'data-empty': '还没有日志' });
+  liveBox.addEventListener('scroll', () => {
+    const stick = liveBox.scrollHeight - liveBox.scrollTop - liveBox.clientHeight < 40;
+    // 只有「回到最新」按钮要变的时候才刷新，滚轮一格会触发很多次 scroll
+    if (stick === LIVE.stick) return;
+    LIVE.stick = stick;
+    refresh();
+  }, { passive: true });
+
+  const liveOn = () => (page === 'run' || compact) && !document.hidden;
+
+  async function pollLive(force) {
+    if (LIVE.busy || (!force && !liveOn())) return;
+    const d = new Date();
+    const today = d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+    if (today !== LIVE.date) { LIVE.date = today; LIVE.offset = -1; }
+    LIVE.busy = true;
+    try {
+      const res = await fetch('/api/log?date=' + LIVE.date + '&offset=' + LIVE.offset + '&tail=400', { cache: 'no-store' });
+      const body = await res.json();
+      if (body.reset) { liveBox.replaceChildren(); miniBox.replaceChildren(); }
+      LIVE.offset = body.offset;
+      if (body.text) {
+        const items = logLines(body.text);
+        const kw = LIVE.kw.trim().toLowerCase();
+        appendLog(liveBox, items, 1500, LIVE.stick, (el) => rowVisible(el, LIVE.level, kw));
+        const miniAt = miniBox.scrollHeight - miniBox.scrollTop - miniBox.clientHeight < 40;
+        appendLog(miniBox, items, 300, miniAt, (el) => rowVisible(el, MINI.onlyWarn ? 'warn' : 'all', ''));
+      }
+    } catch (e) { /* 下一轮再试 */ } finally {
+      LIVE.busy = false;
+    }
+  }
+
+  function levelSelect(read, write) {
+    const sel = h('select', { class: 'input', 'aria-label': '按级别筛选', onchange: (e) => write(e.target.value) },
+      h('option', { value: 'all' }, '全部级别'), h('option', { value: 'warn' }, '警告以上'), h('option', { value: 'err' }, '只看错误'));
+    bindings.push(() => { if (sel.value !== read()) sel.value = read(); });
+    return sel;
+  }
+
+  function searchBox(placeholder, onInput) {
+    let timer = 0;
+    return h('label', { class: 'search-input' }, icon('search', 15),
+      h('input', { type: 'search', placeholder, spellcheck: 'false', 'aria-label': placeholder, oninput: (e) => { clearTimeout(timer); const v = e.target.value; timer = setTimeout(() => onInput(v), 150); } }));
+  }
+
+  // ---------- 任务队列 ----------
+  function queueModel() {
+    const st = R.status;
+    const now = new Date(st.now);
+    const running = st.runtime.alive ? st.runtime.task : null;
+    const rest = st.tasks.filter((t) => t.task !== running);
+    const first = rest.filter((t) => t.run_now).sort((a, b) => String(a.run_now).localeCompare(String(b.run_now)));
+    const due = rest.filter((t) => t.enabled && !t.run_now && (!t.next_run || new Date(t.next_run) <= now));
+    const waiting = rest.filter((t) => t.enabled && !t.run_now && t.next_run && new Date(t.next_run) > now)
+      .sort((a, b) => new Date(a.next_run) - new Date(b.next_run));
+    const off = rest.filter((t) => !t.enabled && !t.run_now);
+    return { running: running ? st.tasks.find((t) => t.task === running) || { task: running, name: nameOf(running) } : null, queue: first.concat(due), waiting, off, now };
+  }
+
+  function lastResultEl(t) {
+    if (!t.last_run) return h('span', { class: 'hint' }, '还没跑过');
+    const [label, cls] = RESULT[t.result] || ['跑过', 'mute'];
+    const fail = t.result === 'failed' && t.failure ? '（连续 ' + t.failure + ' 次）' : '';
+    return h('span', { title: when(t.last_run) + ' ' + label + fail }, h('em', { class: 'status sm ' + cls }, label + fail), ' ' + when(t.last_run));
+  }
+
+  function runNowButton(t, kind) {
+    if (t.run_now) return h('span', { class: 'tag' }, '已插队');
+    const c = R.confirm.get(t.task);
+    const confirming = c && Date.now() - c < 4000;
+    return h('button', {
+      type: 'button',
+      class: 'btn btn-sm' + (confirming ? ' confirm' : ''),
+      onclick: () => runNow(t),
+      title: confirming ? '今天已经成功跑过，再跑可能会再花晨星' : kind === 'off' ? '开关没开也可以先跑一次试试' : '插到队首，当前任务做完马上跑',
+    }, icon('play', 11), confirming ? '再点一次确认' : kind === 'off' ? '试跑一次' : '立即执行');
+  }
+
+  function queueRow(t, kind) {
+    const alive = R.status.runtime.alive;
+    let meta;
+    if (kind === 'running') meta = h('span', null, '已经跑了 ', h('b', { class: 'num', 'data-since': R.status.runtime.task_started || '' }));
+    else if (kind === 'queue') meta = t.run_now ? (alive ? '当前任务做完就跑' : '等脚本启动') : alive ? '排队中' : '已到期，启动后就跑';
+    else if (kind === 'waiting') meta = when(t.next_run) + ' 跑';
+    else meta = '开关没开';
+    return h('div', { class: 'grow-r ' + kind },
+      h('span', { class: 't-main' }, t.name),
+      typeof meta === 'string' ? h('span', null, meta) : meta,
+      lastResultEl(t),
+      kind === 'running' ? h('span', { class: 'pulse', 'aria-hidden': 'true' }) : h('span', { class: 'acts' }, runNowButton(t, kind)));
+  }
+
+  const QOFF = { open: false };
+  function queueTable() {
+    const body = h('div', { class: 'gtbody' });
+    let sig = '';
+    bindings.push(() => {
+      if (!R.status) return;
+      const m = queueModel();
+      const next = JSON.stringify([m.running, m.queue, m.waiting, m.off, [...R.confirm.entries()].filter(([, v]) => Date.now() - v < 4000), Math.floor(Date.now() / 60000), R.status.runtime.alive]);
+      if (next === sig) return;
+      sig = next;
+      const sec = (title, n) => h('div', { class: 'gsec' }, h('span', null, title), h('span', { class: 'count' }, String(n)));
+      const groups = [];
+      m.waiting.forEach((t) => {
+        const label = dayLabel(new Date(t.next_run));
+        if (!groups.length || groups[groups.length - 1][0] !== label) groups.push([label, []]);
+        groups[groups.length - 1][1].push(t);
+      });
+      const alive = R.status.runtime.alive;
+      body.replaceChildren(...[
+        m.running ? [sec('正在跑', 1), queueRow(m.running, 'running')] : [],
+        sec(alive ? '排队中' : '已到期', m.queue.length),
+        m.queue.length ? m.queue.map((t) => queueRow(t, 'queue')) : h('div', { class: 'empty sm' }, h('span', null, alive ? '没有排队的任务' : '没有到期的任务')),
+        groups.map(([label, list]) => [sec(label === '今天' ? '今天晚些时候' : label, list.length), list.map((t) => queueRow(t, 'waiting'))]),
+        m.off.length ? h('details', { class: 'gfold', open: QOFF.open, ontoggle: (e) => { QOFF.open = e.target.open; } },
+          h('summary', { class: 'gsec' }, h('span', null, '没开的任务'), h('span', { class: 'count' }, String(m.off.length)), icon('chev', 14, 'chev')),
+          m.off.map((t) => queueRow(t, 'off'))) : null,
+      ].flat(Infinity).filter(Boolean));
+      tickSince();
+    });
+    return h('div', { class: 'gtable queue-table' },
+      h('div', { class: 'gthead' }, h('span', null, '任务'), h('span', null, '状态'), h('span', null, '上次'), h('span', { class: 'r' }, '操作')),
+      body);
+  }
+
+  /** 控制台里的小队列：最近做完的两项、正在跑的、接下来的几项 */
+  function stepsList() {
+    const list = h('ol', { class: 'steps', 'aria-label': '任务进度' });
+    let sig = '';
+    bindings.push(() => {
+      if (!R.status) return;
+      const m = queueModel();
+      const hs = (R.status.history || []).filter((r) => !m.running || r.task !== m.running.task);
+      const seen = new Set();
+      const done = [];
+      hs.forEach((r) => { if (!seen.has(r.task) && done.length < 2) { seen.add(r.task); done.unshift(r); } });
+      const rows = done.map((r) => ({ name: nameOf(r.task), cls: r.result === 'success' ? 'done' : r.result === 'skip' ? 'skip' : 'fail', em: hm(new Date(r.end)) }));
+      if (m.running) rows.push({ name: m.running.name, cls: 'cur', since: R.status.runtime.task_started || '' });
+      const next = m.queue.concat(m.waiting);
+      const room = Math.max(0, 8 - rows.length);
+      next.slice(0, room).forEach((t) => rows.push({
+        name: t.name,
+        cls: '',
+        em: t.run_now ? '插队' : (!t.next_run || new Date(t.next_run) <= m.now) ? '已到期' : shortWhen(t.next_run),
+      }));
+      const more = next.length - room;
+      const s = JSON.stringify([rows, more]);
+      if (s === sig) return;
+      sig = s;
+      const items = rows.map((r) => h('li', { class: r.cls }, h('span', null, r.name), r.since !== undefined ? h('em', { 'data-since': r.since }) : h('em', null, r.em)));
+      if (more > 0) items.push(h('li', { class: 'more' }, h('button', { type: 'button', onclick: () => { RT.tab = 'queue'; refresh(); } }, '还有 ' + more + ' 项 · 看队列')));
+      if (!rows.length) items.push(h('li', { class: 'more' }, R.status.tasks.some((t) => t.enabled) ? '今天开着的任务都跑完了' : '没有开着的任务'));
+      list.replaceChildren(...items);
+      tickSince();
+    });
+    return list;
+  }
+
+  // ---------- 运行记录 ----------
+  function histRow(r, onError) {
+    const start = new Date(r.start);
+    const [text, cls] = RESULT[r.result] || [r.result, 'mute'];
+    return h('div', { class: 'grow-r' },
+      h('span', { class: 't-num' }, hm(start) + ' – ' + hm(new Date(r.end))),
+      h('span', { class: 't-main' }, nameOf(r.task)),
+      h('span', { class: 't-num' }, spanText(new Date(r.end) - start)),
+      h('span', null, h('em', { class: 'status sm ' + cls }, text)),
+      h('span', { class: 'acts' }, r.error ? h('button', { type: 'button', class: 'btn btn-sm btn-ghost', onclick: () => onError(r.error) }, icon('image', 13), '错误截图') : null));
+  }
+
+  const histHead = () => h('div', { class: 'gthead' }, h('span', null, '时间'), h('span', null, '任务'), h('span', null, '耗时'), h('span', null, '结果'), h('span', { class: 'r' }, '截图'));
+
+  function todayTable() {
+    const body = h('div', { class: 'gtbody' });
+    let sig = '';
+    bindings.push(() => {
+      const hs = (R.status && R.status.history) || [];
+      const s = JSON.stringify(hs);
+      if (s === sig) return;
+      sig = s;
+      body.replaceChildren(...(hs.length ? hs.map((r) => histRow(r, openErrorShots)) : [emptyEl('inbox', '今天还没有运行记录', '每跑完一项都会记在这里')]));
+    });
+    return h('div', { class: 'gtable hist-table' }, histHead(), body);
+  }
+
+  function openErrorShots(name) {
+    LG.tab = 'errors';
+    LG.folder = name;
+    if (page === 'logs') {
+      renderErrors();
+      refresh();
+    } else {
+      go('logs');
+    }
+  }
+
+  // ---------- 运行页：左边控制台，右边日志 / 队列 / 今天的记录 ----------
+  const RT = { tab: 'log' };
+
+  function tabbar(read, write, tabs, side) {
+    return h('div', { class: 'tabbar', role: 'tablist' },
+      tabs.map(([id, label, count]) => h('button', { type: 'button', role: 'tab', class: 'tab', 'aria-selected': () => String(read() === id), onclick: () => write(id) },
+        label, count ? h('em', { class: 'count' }, count) : null)),
+      side ? h('div', { class: 'tabbar-side' }, side) : null);
+  }
+
+  function statNum(key, label, cls) {
+    return h('div', { class: () => 'stat ' + (todayCounts()[key] ? cls : 'zero') }, h('b', null, () => String(todayCounts()[key])), h('span', null, label));
   }
 
   function runPage() {
-    return h('div', { class: 'page run-page', show: () => page === 'run' },
-      pageHead('运行', '启动后先跑已到期的任务，然后常驻，每天刷新后自动再跑一遍。'),
-      heroCard(),
-      h('div', { class: 'run-grid' }, queueCard(), liveCard(), screenCard()));
+    const running = () => !!runState().since;
+    const toLatest = h('button', { type: 'button', class: 'to-latest', show: () => !LIVE.stick, onclick: () => { LIVE.stick = true; liveBox.scrollTop = liveBox.scrollHeight; refresh(); } }, icon('down', 14), '回到最新');
+    return h('section', { class: 'page page-split', show: () => page === 'run' },
+      h('div', { class: 'console' },
+        h('div', { class: 'console-body' },
+          h('div', { class: 'block' },
+            h('div', { class: 'status-row' },
+              h('em', { class: () => 'status ' + runInfo().cls }, () => runInfo().pill),
+              h('span', { class: 'grow' }),
+              h('span', { class: () => 'timer' + (running() ? '' : ' dim'), 'data-since': () => runState().since || '', 'data-empty': '0:00' }, '0:00')),
+            h('div', { class: 'status-meta', title: () => runInfo().meta }, () => runInfo().meta),
+            h('div', { class: 'stats' }, statNum('success', '今天完成', 'ok'), statNum('skip', '今天跳过', ''), statNum('failed', '今天失败', 'bad'))),
+          h('div', { class: 'block' },
+            h('div', { class: 'live' }, screenView(), stepsList()),
+            h('div', { class: 'screen-foot' },
+              h('span', null, () => (SC.error && SC.url ? '最新一张没截到' : SC.time ? hms(SC.time) + ' 的画面' : '模拟器画面')),
+              h('span', { class: 'grow' }),
+              h('button', { type: 'button', role: 'switch', class: 'mini-switch', 'aria-checked': () => String(SC.auto), onclick: setScreenAuto }, h('span', { class: 'switch' }), '自动刷新')),
+            h('div', { class: () => 'caption' + (runInfo().bad || R.offline ? ' error' : runState().kind === 'stopping' ? ' warn' : '') }, h('span', null, runDetail))),
+          h('div', { class: 'block' },
+            h('div', { class: 'block-head' }, h('h3', null, '运行设置'), h('a', { class: 'link-btn', href: '#/settings', style: { 'margin-left': 'auto', 'font-size': '12px' } }, '去设置', icon('arrow', 13))),
+            h('div', { class: 'kv' },
+              h('div', null, h('label', null, '每天开始'), h('span', { class: 'v' }, h('b', null, () => localTime(get('Scheduler', 'ServerUpdate'), get('Scheduler', 'ServerTimezone'))), ' 你电脑上的时间')),
+              h('div', null, h('label', null, '开着的'), h('span', { class: 'v' }, h('b', null, () => D.enabled + ' / ' + D.tasks), ' 项 · ', h('a', { class: 'link-btn', href: '#/route' }, '改路线'))),
+              h('div', null, h('label', null, '最多花'), h('span', { class: 'v' }, h('b', { class: 'gold' }, () => fmt(D.total) + (D.more ? '+' : '')), ' 晨星 / 天')),
+              h('div', null, h('label', null, '失败上限'), h('span', { class: 'v' }, '同一项连续 ', h('b', null, () => String(get('Scheduler', 'FailureLimit'))), ' 次就停下等你'))))),
+        h('div', { class: 'console-foot' }, runButton('main'), footHint())),
+      h('div', { class: 'work' },
+        tabbar(() => RT.tab, (id) => {
+          RT.tab = id;
+          refresh();
+          if (id === 'log' && LIVE.stick) requestAnimationFrame(() => { liveBox.scrollTop = liveBox.scrollHeight; });
+        }, [
+          ['log', '实时日志'],
+          ['queue', '任务队列', () => (R.status ? String(queueModel().queue.length + (queueModel().running ? 1 : 0)) : '0')],
+          ['today', '今天的记录', () => String(((R.status && R.status.history) || []).length)],
+        ]),
+        h('div', { class: 'tab-panel', show: () => RT.tab === 'log' },
+          h('div', { class: 'toolbar' },
+            searchBox('搜索日志，例如 公会战、失败', (v) => { LIVE.kw = v; filterBox(liveBox, LIVE.level, v.trim().toLowerCase()); }),
+            levelSelect(() => LIVE.level, (v) => { LIVE.level = v; filterBox(liveBox, v, LIVE.kw.trim().toLowerCase()); }),
+            h('span', { class: 'grow' }),
+            h('a', { class: 'btn btn-ghost', href: '#/logs' }, icon('logs', 15), '历史日志')),
+          h('div', { class: 'log-wrap' }, liveBox, toLatest)),
+        h('div', { class: 'tab-panel', show: () => RT.tab === 'queue' },
+          h('div', { class: 'toolbar' },
+            h('div', { class: 'meta' }, '按路线顺序跑', h('i', { class: 'vsep' }), '点「立即执行」插到队首，当前任务做完马上跑')),
+          queueTable()),
+        h('div', { class: 'tab-panel', show: () => RT.tab === 'today' },
+          h('div', { class: 'toolbar' },
+            h('div', { class: 'meta' }, '完成 ', h('b', null, () => String(todayCounts().success)), h('i', { class: 'vsep' }), '跳过 ', h('b', null, () => String(todayCounts().skip)), h('i', { class: 'vsep' }), '失败 ', h('b', null, () => String(todayCounts().failed))),
+            h('span', { class: 'grow' }),
+            h('a', { class: 'btn btn-ghost', href: '#/logs', onclick: () => { LG.tab = 'history'; } }, icon('clock', 15), '全部记录')),
+          todayTable())));
   }
 
   // ---------- 日志页 ----------
-  const LG = { tab: 'log', dates: [], date: '', errors: [], history: [], level: 'all', kw: '', folder: '', loading: false, text: null };
-  const logBox = h('div', { class: 'logbox full', role: 'log' });
-  const historyBox = h('div', { class: 'history' });
+  const LG = { tab: 'log', dates: [], date: '', errors: [], history: [], level: 'all', kw: '', folder: '', loading: false, shown: undefined };
+  const logBox = h('div', { class: 'log', role: 'log', 'data-empty': '这一天没有日志' });
+  const historyBody = h('div', { class: 'gtbody' });
   const errorList = h('div', { class: 'err-list' });
   const errorShots = h('div', { class: 'err-shots' });
 
@@ -1552,9 +1860,10 @@
       LG.errors = body.errors;
       LG.history = body.history;
       if (!LG.date || !LG.dates.some((d) => d.date === LG.date)) LG.date = LG.dates.length ? LG.dates[0].date : '';
-      if (!LG.folder && LG.errors.length) LG.folder = LG.errors[0].name;
+      if ((!LG.folder || !LG.errors.some((f) => f.name === LG.folder)) && LG.errors.length) LG.folder = LG.errors[0].name;
       renderHistory();
       renderErrors();
+      refresh();
       await loadLogFile();
     } catch (e) {
       toast('读不到日志', 'error');
@@ -1562,15 +1871,19 @@
   }
 
   async function loadLogFile() {
-    if (!LG.date) { logBox.replaceChildren(h('div', { class: 'q-empty' }, '还没有日志')); return; }
+    if (!LG.date) {
+      logBox.replaceChildren();
+      LG.shown = 0;
+      refresh();
+      return;
+    }
     LG.loading = true;
     refresh();
     try {
       const res = await fetch('/api/log?date=' + LG.date + '&tail=6000', { cache: 'no-store' });
       const body = await res.json();
-      const frag = document.createDocumentFragment();
-      logLines(body.text).map(lineEl).filter(Boolean).forEach((el) => frag.appendChild(el));
-      logBox.replaceChildren(frag);
+      logBox.replaceChildren();
+      appendLog(logBox, logLines(body.text), 6000, true, null);
       filterLog();
       logBox.scrollTop = logBox.scrollHeight;
     } finally {
@@ -1580,15 +1893,7 @@
   }
 
   function filterLog() {
-    const kw = LG.kw.trim().toLowerCase();
-    let shown = 0;
-    [...logBox.children].forEach((el) => {
-      const okLevel = LG.level === 'all' || (LG.level === 'warn' ? !el.classList.contains('info') : el.classList.contains('err'));
-      const ok = okLevel && (!kw || el.textContent.toLowerCase().includes(kw));
-      el.hidden = !ok;
-      if (ok) shown += 1;
-    });
-    LG.shown = shown;
+    LG.shown = filterBox(logBox, LG.level, LG.kw.trim().toLowerCase());
     refresh();
   }
 
@@ -1610,41 +1915,33 @@
       type: 'button',
       class: 'err-item' + (f.name === LG.folder ? ' on' : ''),
       onclick: () => { LG.folder = f.name; renderErrors(); },
-    }, h('b', null, folderTime(f.name)), h('span', null, (errorTask(f.name) ? errorTask(f.name) + ' · ' : '') + f.files.length + ' 张截图'))) : [h('div', { class: 'q-empty' }, '没有错误截图')]));
+    }, h('b', null, folderTime(f.name)), h('span', null, (errorTask(f.name) ? errorTask(f.name) + ' · ' : '') + f.files.length + ' 张截图'))) : [h('div', { class: 'empty sm' }, h('span', null, '没有错误截图'))]));
     const folder = LG.errors.find((f) => f.name === LG.folder);
     errorShots.replaceChildren(...(folder ? folder.files.slice().reverse().map((file, i) => h('a', {
       class: 'shot', href: '/api/error/' + folder.name + '/' + file, target: '_blank', rel: 'noopener',
-    }, h('img', { src: '/api/error/' + folder.name + '/' + file, alt: file, loading: 'lazy' }), h('span', null, (i === 0 ? '最后一张 · ' : '') + file.replace(/^(\d{2})(\d{2})(\d{2})_(\d+)\.png$/, '$1:$2:$3')))) : []));
+    }, h('img', { src: '/api/error/' + folder.name + '/' + file, alt: file, loading: 'lazy' }), h('span', null, (i === 0 ? '最后一张 · ' : '') + file.replace(/^(\d{2})(\d{2})(\d{2})_(\d+)\.png$/, '$1:$2:$3')))) : [emptyEl('image', '没有错误截图', '任务失败时会自动保存出错前的最近 10 张截图')]));
   }
 
   function renderHistory() {
     if (!LG.history.length) {
-      historyBox.replaceChildren(h('div', { class: 'q-empty' }, '还没有运行记录。从这个版本开始，每跑完一项都会记一笔。'));
+      historyBody.replaceChildren(emptyEl('inbox', '还没有运行记录', '每跑完一项都会记一笔'));
       return;
     }
     const rows = [];
     let day = '';
     LG.history.forEach((r) => {
-      const start = new Date(r.start);
-      const label = dayLabel(start);
+      const label = dayLabel(new Date(r.start));
       if (label !== day) {
         day = label;
-        rows.push(h('div', { class: 'h-day' }, label));
+        rows.push(h('div', { class: 'gsec' }, label));
       }
-      const [text, cls] = RESULT[r.result] || [r.result, 'mute'];
-      rows.push(h('div', { class: 'h-row' },
-        h('span', { class: 'h-time' }, hm(start) + ' – ' + hm(new Date(r.end))),
-        h('span', { class: 'h-name' }, nameOf(r.task)),
-        h('span', { class: 'h-dur' }, spanText(new Date(r.end) - start)),
-        h('span', { class: 'res ' + cls }, text),
-        r.error ? h('button', { type: 'button', class: 'btn btn-sm btn-ghost', onclick: () => { LG.tab = 'errors'; LG.folder = r.error; renderErrors(); refresh(); } }, icon('image', 14), '错误截图') : h('span')));
+      rows.push(histRow(r, openErrorShots));
     });
-    historyBox.replaceChildren(...rows);
+    historyBody.replaceChildren(...rows);
   }
 
   function logsPage() {
-    const tab = (id, label) => h('button', { type: 'button', role: 'tab', 'aria-selected': () => String(LG.tab === id), onclick: () => { LG.tab = id; refresh(); } }, label);
-    const dateSel = h('select', { class: 'input narrow', 'aria-label': '日期', onchange: (e) => { LG.date = e.target.value; loadLogFile(); } });
+    const dateSel = h('select', { class: 'input', 'aria-label': '日期', onchange: (e) => { LG.date = e.target.value; loadLogFile(); } });
     let dateSig = '';
     bindings.push(() => {
       const sig = LG.dates.map((d) => d.date).join();
@@ -1654,58 +1951,101 @@
       }
       if (dateSel.value !== LG.date) dateSel.value = LG.date;
     });
-    let kwTimer = 0;
-    return h('div', { class: 'page logs-page', show: () => page === 'logs' },
-      pageHead('日志', '脚本每一步都记在这里。出错时自动保存最近 10 张截图。',
-        h('button', { type: 'button', class: 'btn', onclick: loadLogs }, icon('refresh', 16), '刷新')),
-      h('div', { class: 'tabs', role: 'tablist' }, tab('log', '日志'), tab('history', '运行记录'), tab('errors', '错误截图')),
-      h('section', { class: 'ocard', show: () => LG.tab === 'log' },
-        h('div', { class: 'log-tools' },
-          dateSel,
-          h('div', { class: 'mini-seg', role: 'group', 'aria-label': '级别' },
-            [['all', '全部'], ['warn', '警告以上'], ['err', '只看错误']].map(([v, label]) =>
-              h('button', { type: 'button', 'aria-pressed': () => String(LG.level === v), onclick: () => { LG.level = v; filterLog(); } }, label))),
-          h('input', { class: 'input search', type: 'search', placeholder: '搜索，例如 公会战、失败', 'aria-label': '搜索日志', oninput: (e) => { LG.kw = e.target.value; clearTimeout(kwTimer); kwTimer = setTimeout(filterLog, 150); } }),
-          h('span', { class: 'hint' }, () => (LG.loading ? '读取中…' : (LG.shown === undefined ? '' : LG.shown + ' 条')))),
-        logBox),
-      h('section', { class: 'ocard', show: () => LG.tab === 'history' }, historyBox),
-      h('section', { class: 'ocard err-card', show: () => LG.tab === 'errors' }, errorList, errorShots));
+    return h('section', { class: 'page', show: () => page === 'logs' },
+      h('div', { class: 'work' },
+        tabbar(() => LG.tab, (id) => { LG.tab = id; refresh(); }, [
+          ['log', '日志'],
+          ['history', '运行记录', () => String(LG.history.length)],
+          ['errors', '错误截图', () => String(LG.errors.length)],
+        ], h('button', { type: 'button', class: 'btn btn-ghost', onclick: loadLogs }, icon('refresh', 15), '刷新')),
+        h('div', { class: 'tab-panel', show: () => LG.tab === 'log' },
+          h('div', { class: 'toolbar' },
+            dateSel,
+            levelSelect(() => LG.level, (v) => { LG.level = v; filterLog(); }),
+            searchBox('搜索，例如 公会战、失败', (v) => { LG.kw = v; filterLog(); }),
+            h('span', { class: 'grow' }),
+            h('span', { class: 'hint' }, () => (LG.loading ? '读取中…' : (LG.shown === undefined ? '' : LG.shown + ' 条')))),
+          h('div', { class: 'log-wrap' }, logBox)),
+        h('div', { class: 'tab-panel', show: () => LG.tab === 'history' },
+          h('div', { class: 'gtable hist-table', style: { 'padding-top': '12px' } }, histHead(), historyBody)),
+        h('div', { class: 'tab-panel', show: () => LG.tab === 'errors' },
+          h('div', { class: 'err-split' }, errorList, errorShots))));
   }
 
   // ---------- 活动、工具（占位） ----------
-  function emptyPage(id, title, desc, ic, lines) {
-    return h('div', { class: 'page', show: () => page === id },
-      pageHead(title, desc),
-      h('section', { class: 'ocard empty-page' },
-        h('span', { class: 'empty-icon', 'aria-hidden': 'true' }, icon(ic, 28)),
-        h('h2', null, '还没有' + title),
-        lines.map((t) => h('p', null, t))));
+  function emptyPage(id, title, ic, lines) {
+    return h('section', { class: 'page', show: () => page === id },
+      h('div', { class: 'scroll' },
+        h('div', { class: 'empty', style: { padding: '96px 24px' } }, icon(ic, 36), h('b', null, '还没有' + title), lines.map((t) => h('span', null, t)))));
   }
 
-  // ---------- 每天的路线、设置 ----------
+  // ---------- 每天的路线 ----------
   function routePage(groups) {
-    return h('div', { class: 'page', show: () => page === 'route' },
-      h('div', { class: 'layout' },
+    const anyOpen = () => [...S.open].some((g) => has(g) && !isSetting(g));
+    return h('section', { class: 'page', show: () => page === 'route' },
+      h('div', { class: 'scroll' },
         h('div', { class: 'route' },
-          pageHead('每天的路线', '按顺序一项一项做。左边的开关决定今天做不做，点开一项看它怎么做、改细节。', h('span', { class: 'pill' }, () => D.enabled + ' / ' + D.tasks + ' 项开启')),
-          groups.map(([title, tasks], i) => routeGroup(i + 1, title, tasks, i === groups.length - 1))),
-        overview()));
+          h('div', { class: 'route-head' },
+            h('span', { class: 'pill' }, () => D.enabled + ' / ' + D.tasks + ' 项开启'),
+            h('span', null, '开关决定今天做不做；改完点右上角「保存」'),
+            h('span', { class: 'grow' }),
+            h('button', { type: 'button', class: 'btn btn-sm btn-ghost', show: anyOpen, onclick: () => { [...S.open].forEach((g) => { if (!isSetting(g)) S.open.delete(g); }); saveOpen(); refresh(); } }, '全部收起')),
+          groups.map(([title, tasks], i) => routeGroup(i + 1, title, tasks, i === groups.length - 1)))),
+      overview());
+  }
+
+  // ---------- 设置：每个分组直接展开 ----------
+  function setGroup(g) {
+    const spec = specOf(g);
+    const name = S.arg[g]._name || g;
+    const hasSwitch = 'Enable' in S.cfg[g];
+    const on = () => !hasSwitch || isOn(g);
+    const icons = { Scheduler: 'clock', Notify: 'bell', Device: 'device' };
+    return h('div', { class: 'set-group', id: 'task-' + g },
+      h('h2', null, icon(icons[g] || spec.icon || 'sliders', 16), name,
+        h('span', { class: 'badge', show: () => changed(g) && !groupHasError(g) }, '已修改'),
+        h('span', { class: 'badge error', show: () => groupHasError(g) }, '需要改一下'),
+        hasSwitch ? h('button', { type: 'button', role: 'switch', 'aria-label': name, 'aria-checked': () => String(on()), onclick: () => set(g, 'Enable', !on()) },
+          h('span', null, () => (on() ? '已开启' : '已关闭')), h('span', { class: 'switch' })) : null),
+      h('p', null, () => (on() ? spec.sentence() : '已关闭')),
+      h('div', { class: 'set-body' },
+        spec.panel(),
+        h('div', { class: 'reset-row', show: () => canReset(g) }, h('button', { type: 'button', class: 'btn btn-sm', onclick: () => reset(g) }, '恢复这一组的默认设置'))));
   }
 
   function settingsPage(ids) {
-    return h('div', { class: 'page settings-page', show: () => page === 'settings' },
-      pageHead('设置', '什么时候跑、出事怎么提醒你、连哪台模拟器。一般设一次就不用再动。'),
-      h('div', { class: 'settings-list' }, ids.map(taskCard)));
+    const file = S.file ? S.file.split(/[\\/]/).slice(-2).join('/') : 'config/zjcs.yaml';
+    return h('section', { class: 'page', show: () => page === 'settings' },
+      h('div', { class: 'scroll settings' },
+        h('div', { class: 'settings-inner' },
+          ids.map(setGroup),
+          h('div', { class: 'set-group' },
+            h('h2', null, icon('sun', 16), '外观'),
+            h('p', null, '跟随系统时，电脑切换深浅色这里跟着变。'),
+            h('div', { class: 'set-row' }, h('div', { class: 'sr-text' }, h('b', null, '配色'), h('small', null, '只影响这个界面，不影响游戏和脚本')), h('div', { class: 'sr-ctl' }, themeSeg()))),
+          h('div', { class: 'set-group' },
+            h('h2', null, icon('dock', 16), '窗口'),
+            h('div', { class: 'set-row' },
+              h('div', { class: 'sr-text' }, h('b', null, '迷你模式'),
+                h('small', null, DESK.ok
+                  ? '窗口缩成贴在屏幕右侧、高 720 的窄条，只留启动/停止、模拟器画面、今天的结果和实时日志，不挡模拟器；点窄条右上角的 ⤢ 还原。'
+                  : '切换成只有启动/停止、模拟器画面和实时日志的窄条布局。用新版桌面壳打开时，窗口还会缩小并贴到屏幕右侧。')),
+              h('div', { class: 'sr-ctl' }, h('button', { type: 'button', class: 'btn', onclick: () => setCompact(true) }, icon('dock', 15), '切换到迷你模式'))),
+            h('div', { class: 'set-row' },
+              h('div', { class: 'sr-text' }, h('b', null, '快捷键'), h('small', null, '保存设置')),
+              h('div', { class: 'sr-ctl' }, h('kbd', null, /Mac/.test(navigator.platform) ? '⌘ S' : 'Ctrl S')))),
+          h('div', { class: 'set-group' },
+            h('h2', null, icon('info', 16), '关于'),
+            h('div', { class: 'about' }, logo(),
+              h('div', { class: 'grow' }, h('b', null, 'ZJCSAutoScript'), h('small', null, '杖剑传说 · 每日自动化 · 配置保存在 '), h('code', null, file)))))));
   }
 
   function openErrors() {
     const groups = [...new Set(Object.keys(S.errors).map((k) => k.split('_')[0]))].filter(has);
-    groups.forEach((g) => S.open.add(g));
+    groups.forEach((g) => { if (!isSetting(g)) S.open.add(g); });
     saveOpen();
-    if (groups.length) go(isSetting(groups[0]) ? 'settings' : 'route');
+    if (groups.length) jumpTo(groups[0]);
     refresh();
-    const first = groups.length && document.getElementById('task-' + groups[0]);
-    if (first) setTimeout(() => scrollToCard(first), 60);
   }
 
   async function save() {
@@ -1753,13 +2093,14 @@
   let toastTimer = 0;
   function toast(text, kind = '') {
     const el = document.getElementById('toast');
-    el.replaceChildren(kind === 'error' ? icon('alert', 18) : icon('check', 18), h('span', null, text));
-    el.className = 'toast show' + (kind === 'error' ? ' error' : '');
+    el.replaceChildren(lvIcon(kind === 'error' ? 'err' : kind === 'ok' ? 'ok' : 'info'), h('span', null, text));
+    el.className = 'toast show';
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { el.className = el.className.replace(' show', ''); }, kind === 'error' ? 4200 : 2400);
+    toastTimer = setTimeout(() => { el.className = 'toast'; }, kind === 'error' ? 4200 : 2400);
   }
 
   function refresh() {
+    if (!S) return;
     derive();
     bindings.forEach((b) => b());
     tickSince();
@@ -1769,9 +2110,102 @@
   function tickSince() {
     document.querySelectorAll('[data-since]').forEach((el) => {
       const since = el.getAttribute('data-since');
-      const text = since ? clock(Date.now() - new Date(since).getTime()) : '';
+      const text = since ? clock(Date.now() - new Date(since).getTime()) : (el.getAttribute('data-empty') || '');
       if (el.textContent !== text) el.textContent = text;
     });
+  }
+
+  // ---------- 侧栏、顶栏 ----------
+  function logo(cls = '') {
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 40 40');
+    svg.setAttribute('class', 'logo' + (cls ? ' ' + cls : ''));
+    svg.setAttribute('aria-hidden', 'true');
+    svg.innerHTML = '<defs><linearGradient id="lgZ' + cls + '" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#3461ff"/><stop offset="1" stop-color="#5aa0ff"/></linearGradient></defs>'
+      + '<rect width="40" height="40" rx="11" fill="url(#lgZ' + cls + ')"/><g fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"><circle cx="12" cy="11.5" r="3"/><circle cx="28" cy="28.5" r="3"/><path d="M15.5 11.5h8a5 5 0 0 1 0 10h-7a5 5 0 0 0 0 10h8"/></g>';
+    return svg;
+  }
+
+  function navMark(id) {
+    if (id === 'run') return h('em', { class: () => 'nav-badge ' + runInfo().cls, show: () => !!runInfo().badge }, () => runInfo().badge);
+    if (id === 'route' || id === 'settings') return h('i', { class: 'nav-dot', title: '有没保存的改动', show: () => D.pageChanges[id] > 0 });
+    return null;
+  }
+
+  function sidebar() {
+    const item = ([id, label, ic]) => h('a', {
+      href: '#/' + id,
+      class: () => 'nav-item' + (page === id ? ' on' : ''),
+      'aria-current': () => (page === id ? 'page' : null),
+      title: label,
+    }, icon(ic, 18), h('span', null, label), navMark(id));
+    const byId = (id) => PAGES.find((p) => p[0] === id);
+    return h('aside', { class: 'sidebar' },
+      h('div', { class: 'brand drag' }, logo(), h('div', { class: 'brand-text' }, h('b', null, 'ZJCSAutoScript'), h('span', null, '杖剑传说 · 每日自动化'))),
+      h('nav', { class: 'nav', 'aria-label': '页面' },
+        h('div', { class: 'nav-label' }, '脚本'),
+        ['run', 'route', 'events', 'tools'].map((id) => item(byId(id))),
+        h('div', { class: 'nav-label' }, '数据'),
+        item(byId('logs'))),
+      h('div', { class: 'nav-bottom' }, h('nav', { class: 'nav' }, item(byId('settings'))), connCard()));
+  }
+
+  function topbar() {
+    const saveBtn = h('button', { type: 'button', class: 'btn btn-primary', 'aria-busy': () => String(S.saving), onclick: save },
+      h('span', { class: 'spinner', 'aria-hidden': 'true', show: () => S.saving }),
+      h('span', null, () => (S.saving ? '正在保存' : '保存')),
+      h('kbd', { class: 'kbd' }, /Mac/.test(navigator.platform) ? '⌘S' : 'Ctrl S'));
+    return h('header', { class: 'topbar drag' },
+      h('div', { class: 'page-title' }, h('h1', null, () => pageInfo()[1]), h('span', null, () => pageInfo()[3])),
+      h('div', { class: 'savebar' },
+        h('span', { class: 'save-state dirty', show: () => D.changes > 0 }, h('i', { 'aria-hidden': 'true' }), () => '有 ' + D.changes + ' 处改动还没保存'),
+        h('span', { class: 'save-state', show: () => D.changes === 0 && S.justSaved }, icon('check', 15), '已保存，下一项任务开始前生效'),
+        h('button', { type: 'button', class: 'btn', show: () => D.changes > 0, onclick: undo }, '撤销'),
+        h('span', { show: () => D.changes > 0, style: { display: 'contents' } }, saveBtn)),
+      h('div', { class: 'top-icons' },
+        h('button', { type: 'button', class: 'icon-btn', title: '迷你模式：缩成贴在屏幕右侧的小窗', 'aria-label': '迷你模式', onclick: () => setCompact(true) }, icon('dock', 18)),
+        h('button', { type: 'button', class: 'icon-btn', title: () => (isDark() ? '换成浅色' : '换成深色'), 'aria-label': '切换深浅色', onclick: () => setTheme(isDark() ? 'light' : 'dark') },
+          h('span', { show: () => !isDark(), style: { display: 'contents' } }, icon('moon', 18)),
+          h('span', { show: () => isDark(), style: { display: 'contents' } }, icon('sun', 18)))),
+      winctl());
+  }
+
+  // ---------- 迷你模式 ----------
+  function miniView() {
+    const running = () => !!runState().since;
+    const step = () => {
+      const s = runState();
+      if (R.offline) return [null, '连不上配置服务'];
+      if (s.kind === 'running') {
+        const m = R.status ? queueModel() : null;
+        const next = m && m.queue.concat(m.waiting)[0];
+        return ['正在跑「' + nameOf(s.task) + '」', next ? '下一项：' + next.name : ''];
+      }
+      if (s.kind === 'waiting') return ['今天到期的都跑完了', s.next ? '下一次 ' + when(s.next) : ''];
+      return [null, runInfo().meta];
+    };
+    const num = (key, label, cls) => h('div', { class: () => (todayCounts()[key] ? cls : 'zero') }, h('span', null, label), h('b', null, () => String(todayCounts()[key])));
+    return h('div', { class: 'mini' },
+      h('div', { class: 'mini-top drag' },
+        logo('sm'), h('b', null, 'ZJCSAutoScript'), h('span', { class: 'grow' }),
+        h('button', { type: 'button', class: 'icon-btn', title: '还原完整窗口', 'aria-label': '还原完整窗口', onclick: () => setCompact(false) }, icon('expand', 15)),
+        h('button', { type: 'button', class: 'icon-btn close', title: '关闭', 'aria-label': '关闭', onclick: () => winAction('close') }, icon('x', 15))),
+      h('div', { class: 'mini-panel' },
+        h('div', { class: 'mini-head' },
+          h('div', { class: 'status-row' },
+            h('em', { class: () => 'status ' + runInfo().cls }, () => runInfo().pill),
+            h('span', { class: () => 'timer' + (running() ? '' : ' dim'), 'data-since': () => runState().since || '', 'data-empty': '0:00' }, '0:00')),
+          h('div', { class: 'mini-live' }, screenView(),
+            h('div', { class: 'mini-nums' }, num('success', '今天完成', 'ok'), num('skip', '今天跳过', ''), num('failed', '今天失败', 'bad'))),
+          h('div', { class: 'mini-step', title: () => step().filter(Boolean).join(' · ') },
+            h('b', { show: () => !!step()[0] }, () => step()[0] || ''), h('span', { show: () => !!step()[0] && !!step()[1] }, ' · '), h('span', null, () => step()[1] || '')),
+          runButton('mini', 'mini-run')),
+        h('div', { class: 'mini-log-head' }, '实时日志', h('span', { class: 'grow' }),
+          h('div', { class: 'mini-seg', role: 'group', 'aria-label': '显示哪些日志' },
+            h('button', { type: 'button', 'aria-pressed': () => String(!MINI.onlyWarn), onclick: () => { MINI.onlyWarn = false; filterBox(miniBox, 'all', ''); refresh(); } }, '全部'),
+            h('button', { type: 'button', 'aria-pressed': () => String(MINI.onlyWarn), onclick: () => { MINI.onlyWarn = true; filterBox(miniBox, 'warn', ''); refresh(); } }, '只看警告'))),
+        miniBox),
+      h('div', { class: 'mini-foot' }, h('span', { class: () => 'dot ' + deviceState()[0] }), h('span', { title: () => deviceState()[1] }, () => '模拟器' + deviceState()[1])));
   }
 
   // ---------- 启动 ----------
@@ -1785,23 +2219,25 @@
     const shown = groups.filter(([, tasks]) => tasks.some(has));
     const app = document.getElementById('app');
     derive();
-    app.replaceChildren(h('div', { class: 'shell' },
-      sidebar(),
-      h('div', { class: 'main' },
-        topbar(),
-        h('main', { class: 'wrap' },
-          runPage(),
-          routePage(shown),
-          emptyPage('events', '活动', '限时活动的任务放这里，和每天的路线分开。', 'flag', [
-            '每个活动任务会写明开始和结束日期，过期后自动不跑，也不会混进每天的路线。',
-            '有新活动要自动化时告诉我，打通后会出现在这一页。',
-          ]),
-          emptyPage('tools', '工具', '只在你点的时候跑一次的功能，不进每天的调度。', 'tool', [
-            '比如一次性的推图、批量领取这类不需要每天做的事。',
-            '有需要时告诉我，做好后会出现在这一页，点一下就跑。',
-          ]),
-          logsPage(),
-          settingsPage(SETTINGS.filter(has).concat(otherSettings))))));
+    app.replaceChildren(
+      h('div', { class: 'app' },
+        sidebar(),
+        h('div', { class: 'main' },
+          topbar(),
+          h('main', { class: 'panel' },
+            runPage(),
+            routePage(shown),
+            emptyPage('events', '活动', 'flag', [
+              '每个活动任务会写明开始和结束日期，过期后自动不跑，也不会混进每天的路线。',
+              '有新活动要自动化时告诉我，打通后会出现在这一页。',
+            ]),
+            emptyPage('tools', '工具', 'tool', [
+              '比如一次性的推图、批量领取这类不需要每天做的事。',
+              '有需要时告诉我，做好后会出现在这一页，点一下就跑。',
+            ]),
+            logsPage(),
+            settingsPage(SETTINGS.filter(has).concat(otherSettings))))),
+      miniView());
     app.removeAttribute('aria-busy');
     refresh();
     showPage(page);
@@ -1809,28 +2245,34 @@
 
   function fail(message) {
     const app = document.getElementById('app');
-    app.replaceChildren(h('div', { class: 'fail' },
-      h('h1', null, '读不到配置'),
-      h('p', null, message),
-      h('button', { type: 'button', class: 'btn btn-primary', onclick: () => { app.replaceChildren(h('div', { class: 'boot' }, h('span', { class: 'spinner' }), '正在读取配置…')); boot(); } }, '再试一次')));
+    app.replaceChildren(
+      h('div', { class: 'topbar drag', style: { position: 'fixed', top: '0', left: '0', right: '0' } }, h('span', { class: 'grow' }), winctl()),
+      h('div', { class: 'fail' },
+        h('h1', null, '读不到配置'),
+        h('p', null, message),
+        h('button', { type: 'button', class: 'btn btn-primary', onclick: () => { app.replaceChildren(h('div', { class: 'boot' }, h('span', { class: 'spinner' }), '正在读取配置…')); boot(); } }, '再试一次')));
   }
 
   async function boot() {
+    const desk = DESK.ok ? null : await initDesktop();
     try {
       const res = await fetch('/api/config', { cache: 'no-store' });
       if (!res.ok) throw new Error(String(res.status));
       const body = await res.json();
       const cfg = toUi(body.data);
-      S = { arg: body.argument, mac: !!body.mac, cfg, saved: clone(cfg), defaults: defaultsOf(body.argument), open: loadOpen(), errors: {}, saving: false, justSaved: false };
+      S = { arg: body.argument, mac: !!body.mac, file: body.file || '', cfg, saved: clone(cfg), defaults: defaultsOf(body.argument), open: loadOpen(), errors: {}, saving: false, justSaved: false };
       await pollStatus().catch(() => {});
       render();
+      // 迷你模式下刷新了页面：窗口还是窄条，接着用迷你布局
+      if (desk && desk.compact) setCompact(true);
+      loadScreen();
       startTimers();
     } catch (e) {
       fail('配置服务没有响应。确认 gui.py 正在运行，然后再试一次。');
     }
   }
 
-  // 定时器：运行状态每 2 秒（页面在后台时 10 秒），实时日志 1.5 秒，画面 3 秒，计时每秒
+  // 定时器：运行状态每 2 秒（页面在后台时 10 秒），实时日志 1.5 秒，画面 3 秒（其他页面 30 秒，关了自动刷新就不截），计时每秒
   let timersStarted = false;
   function startTimers() {
     if (timersStarted) return;
@@ -1839,9 +2281,14 @@
     setInterval(() => {
       const now = Date.now();
       if (now - last.status >= (document.hidden ? 10000 : 2000)) { last.status = now; pollStatus(); }
-      if (page === 'run' && !document.hidden) {
-        if (now - last.live >= 1500) { last.live = now; pollLive(); }
-        if (SC.auto && now - last.screen >= 3000) { last.screen = now; loadScreen(); }
+      if (!document.hidden) {
+        if (liveOn()) {
+          if (now - last.live >= 1500) { last.live = now; pollLive(); }
+          if (SC.auto && now - last.screen >= 3000) { last.screen = now; loadScreen(); }
+        } else if (SC.auto && now - last.screen >= 30000) {
+          last.screen = now;
+          loadScreen();
+        }
       }
       tickSince();
     }, 500);
@@ -1851,6 +2298,9 @@
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
       e.preventDefault();
       if (S) save();
+    } else if (e.key === 'Escape' && RM.open) {
+      RM.open = '';
+      refresh();
     }
   });
   window.addEventListener('beforeunload', (e) => {
@@ -1859,10 +2309,6 @@
       e.returnValue = '';
     }
   });
-  window.addEventListener('scroll', () => {
-    const bar = document.querySelector('.topbar');
-    if (bar) bar.classList.toggle('scrolled', window.scrollY > 4);
-  }, { passive: true });
 
   boot();
 })();

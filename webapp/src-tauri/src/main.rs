@@ -11,8 +11,12 @@ use std::env;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::thread;
+use std::time::Duration;
 use tauri::webview::{NewWindowResponse, PageLoadEvent};
-use tauri::{AppHandle, Manager, RunEvent, Url, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
+use tauri::{
+    AppHandle, LogicalSize, Manager, PhysicalPosition, PhysicalSize, RunEvent, State, Url, WebviewUrl, WebviewWindow,
+    WebviewWindowBuilder,
+};
 
 #[cfg(windows)]
 use windows::core::HSTRING;
@@ -20,6 +24,123 @@ use windows::core::HSTRING;
 use windows::Win32::UI::WindowsAndMessaging::{MessageBoxW, MB_ICONERROR, MB_OK};
 
 struct BackendState(Mutex<Option<Backend>>);
+
+// 完整窗口和迷你模式的尺寸（逻辑像素）。迷你模式照 300HeroAutoScript：窄高小窗贴到当前显示器工作区右侧
+const FULL_SIZE: (f64, f64) = (1440.0, 900.0);
+const FULL_MIN: (f64, f64) = (1120.0, 680.0);
+const MINI_SIZE: (f64, f64) = (360.0, 720.0);
+const MINI_MIN: (f64, f64) = (300.0, 480.0);
+
+/// 迷你模式：进入前记下窗口位置、大小和是否最大化，还原时放回去
+#[derive(Default)]
+struct Compact {
+    on: bool,
+    saved: Option<(PhysicalPosition<i32>, PhysicalSize<u32>, bool)>,
+}
+
+struct CompactState(Mutex<Compact>);
+
+/// Windows 去掉系统标题栏，最小化、最大化、关闭按钮画在页面顶栏里；Mac 保留红绿灯，内容延伸到标题栏下面
+const FRAMELESS: bool = cfg!(windows);
+
+fn platform() -> &'static str {
+    if cfg!(windows) {
+        "windows"
+    } else if cfg!(target_os = "macos") {
+        "macos"
+    } else {
+        "linux"
+    }
+}
+
+/// 页面启动时问一次：哪个平台、要不要自己画窗口按钮、现在是不是迷你模式（迷你模式下刷新页面要接着用迷你布局）。
+/// async：不在主线程上等锁。切迷你模式时 window_action 拿着锁调窗口方法（要主线程处理），这里在主线程等锁会互相卡死
+#[tauri::command]
+async fn desktop_info(state: State<'_, CompactState>) -> Result<serde_json::Value, String> {
+    let compact = state.0.lock().map(|c| c.on).unwrap_or(false);
+    Ok(serde_json::json!({ "platform": platform(), "frameless": FRAMELESS, "compact": compact }))
+}
+
+/// 页面顶栏的窗口按钮。async：在后台线程跑，窗口操作由 Tauri 转到主线程
+#[tauri::command]
+async fn window_action(window: WebviewWindow, state: State<'_, CompactState>, action: String) -> Result<(), String> {
+    let result = match action.as_str() {
+        "min" => window.minimize(),
+        "max" => match window.is_maximized() {
+            Ok(true) => window.unmaximize(),
+            Ok(false) => window.maximize(),
+            Err(e) => Err(e),
+        },
+        "close" => window.close(),
+        "drag" => window.start_dragging(),
+        "compact" => enter_compact(&window, &state),
+        "full" => exit_compact(&window, &state),
+        _ => return Err(format!("没有这个窗口操作：{action}")),
+    };
+    result.map_err(|e| e.to_string())
+}
+
+fn enter_compact(window: &WebviewWindow, state: &CompactState) -> tauri::Result<()> {
+    let mut compact = state.0.lock().unwrap_or_else(|e| e.into_inner());
+    if compact.on {
+        return Ok(());
+    }
+    // 全屏（Mac 绿灯）下改不了大小，先退出全屏，等动画走完
+    if window.is_fullscreen()? {
+        window.set_fullscreen(false)?;
+        thread::sleep(Duration::from_millis(800));
+    }
+    let maximized = window.is_maximized()?;
+    if maximized {
+        window.unmaximize()?;
+        thread::sleep(Duration::from_millis(200));
+    }
+    let position = window.outer_position()?;
+    let inner = window.inner_size()?;
+    let outer = window.outer_size()?;
+    compact.saved = Some((position, inner, maximized));
+    compact.on = true;
+
+    let scale = window.scale_factor()?;
+    window.set_min_size(Some(LogicalSize::new(MINI_MIN.0, MINI_MIN.1)))?;
+    let Some(monitor) = window.current_monitor()?.or(window.primary_monitor()?) else {
+        return window.set_size(LogicalSize::new(MINI_SIZE.0, MINI_SIZE.1));
+    };
+    let area = monitor.work_area();
+    // 标题栏和边框占的地方（Windows 无边框、Mac 叠加标题栏时都是 0）
+    let frame_w = outer.width.saturating_sub(inner.width);
+    let frame_h = outer.height.saturating_sub(inner.height);
+    let width = (MINI_SIZE.0 * scale).round() as u32;
+    // 屏幕太矮时不超出工作区
+    let height = ((MINI_SIZE.1 * scale).round() as u32).min(area.size.height.saturating_sub(frame_h));
+    window.set_size(PhysicalSize::new(width, height))?;
+    let x = area.position.x + area.size.width as i32 - (width + frame_w) as i32;
+    let y = area.position.y + (area.size.height as i32 - (height + frame_h) as i32) / 2;
+    window.set_position(PhysicalPosition::new(x, y))
+}
+
+fn exit_compact(window: &WebviewWindow, state: &CompactState) -> tauri::Result<()> {
+    let mut compact = state.0.lock().unwrap_or_else(|e| e.into_inner());
+    if !compact.on {
+        return Ok(());
+    }
+    compact.on = false;
+    window.set_min_size(Some(LogicalSize::new(FULL_MIN.0, FULL_MIN.1)))?;
+    match compact.saved.take() {
+        Some((position, size, maximized)) => {
+            window.set_size(size)?;
+            window.set_position(position)?;
+            if maximized {
+                window.maximize()?;
+            }
+            Ok(())
+        }
+        None => {
+            window.set_size(LogicalSize::new(FULL_SIZE.0, FULL_SIZE.1))?;
+            window.center()
+        }
+    }
+}
 
 /// 启动页还没加载完时先攒着消息，加载完再一起发过去
 #[derive(Clone, Default)]
@@ -122,11 +243,19 @@ fn is_startup_page(url: &Url) -> bool {
 }
 
 fn create_window(app: &AppHandle, reporter: Reporter) -> Result<WebviewWindow> {
-    WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
+    let builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
         .title("ZJCSAutoScript")
-        .inner_size(1440.0, 900.0)
-        .min_inner_size(1120.0, 680.0)
+        .inner_size(FULL_SIZE.0, FULL_SIZE.1)
+        .min_inner_size(FULL_MIN.0, FULL_MIN.1)
         .center()
+        .decorations(!FRAMELESS);
+    // 红绿灯放到页面 52px 高的顶栏中间（关闭按钮左边距 18；y 是标题栏容器高减按钮高，11-06 实测 28 时居中）
+    #[cfg(target_os = "macos")]
+    let builder = builder
+        .title_bar_style(tauri::TitleBarStyle::Overlay)
+        .hidden_title(true)
+        .traffic_light_position(tauri::LogicalPosition::new(18.0, 28.0));
+    builder
         .on_page_load(move |window, payload| {
             if payload.event() == PageLoadEvent::Finished && is_startup_page(payload.url()) {
                 reporter.page_ready(window);
@@ -179,8 +308,10 @@ fn run() -> Result<()> {
                 let _ = window.set_focus();
             }
         }))
+        .invoke_handler(tauri::generate_handler![desktop_info, window_action])
         .setup(move |app| {
             app.manage(BackendState(Mutex::new(None)));
+            app.manage(CompactState(Mutex::new(Compact::default())));
             let reporter = Reporter::default();
             let window = create_window(app.handle(), reporter.clone())?;
             let handle = app.handle().clone();

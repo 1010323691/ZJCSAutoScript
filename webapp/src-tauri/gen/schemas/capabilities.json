@@ -1,1 +1,1 @@
-{}
+{"webui":{"identifier":"webui","description":"启动页和 gui.py 的配置界面可以调用窗口命令：最小化、最大化、关闭、拖动、迷你模式","remote":{"urls":["http://127.0.0.1:22367/*"]},"local":true,"windows":["main"],"permissions":["allow-desktop-info","allow-window-action"]}}

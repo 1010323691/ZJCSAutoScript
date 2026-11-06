@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
-<title>ZJCSAutoScript · 配置</title>
+<title>ZJCSAutoScript</title>
 <script>
-// 页面画出来之前先定好深浅色，免得闪一下。选择记在 localStorage，app.js 里的切换按钮会改它
+// 页面画出来之前先定好深浅色，免得闪一下。选择记在 localStorage，设置页的「外观」和顶栏的按钮会改它
 (function () {
   var mode = 'auto';
   try { mode = localStorage.getItem('zjcs.gui.theme') || 'auto'; } catch (e) {}
@@ -14,9 +14,7 @@
   document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
 })();
 </script>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%232A2A28'/%3E%3Cg fill='none' stroke='white' stroke-width='2.6' stroke-linecap='round'%3E%3Ccircle cx='8.5' cy='8' r='2.4'/%3E%3Ccircle cx='23.5' cy='24' r='2.4'/%3E%3Cpath d='M11.5 8h7a4 4 0 0 1 0 8h-5a4 4 0 0 0 0 8h7'/%3E%3C/g%3E%3C/svg%3E">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&amp;display=swap">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='11' fill='%233461ff'/%3E%3Cg fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='11.5' r='3'/%3E%3Ccircle cx='28' cy='28.5' r='3'/%3E%3Cpath d='M15.5 11.5h8a5 5 0 0 1 0 10h-7a5 5 0 0 0 0 10h8'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
