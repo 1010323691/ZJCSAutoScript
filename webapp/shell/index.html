@@ -6,52 +6,71 @@
 <meta name="color-scheme" content="light dark">
 <title>ZJCSAutoScript</title>
 <style>
-  /* 桌面壳的启动页：配置服务起来之前显示，颜色和配置界面的「墨色」主题一致，深浅色跟随系统 */
+  /* 桌面壳的启动页：配置服务起来之前显示，配色和配置界面一致（参照 300HeroAutoScript：浅灰画布 + 白色面板 + 蓝色主色），深浅色跟随系统。
+     Windows 无系统标题栏、Mac 标题栏叠在内容上，所以顶上自带一条可拖动的栏 */
   :root {
-    --bg: #F4F4F2; --surface: #FFFFFF; --ink: #1C1C1A; --ink2: #555550; --ink3: #6B6B66;
-    --line: #E4E4E0; --line2: #D2D2CD; --accent: #2A2A28; --on-accent: #FFFFFF;
-    --danger: #B42318; --danger-soft: #FDECEA; --sunken: #F8F8F6;
+    --canvas: #eceef2; --surface: #ffffff; --surface-2: #f7f8fa; --border: #e3e6eb; --border-2: #eef0f3;
+    --text: #15171c; --text-2: #4a505c; --text-3: #838996; --primary: #3461ff; --primary-soft: #e4e9ff;
+    --danger: #e5484d; --hover: rgba(255, 255, 255, .75);
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #121212; --surface: #1B1B1B; --ink: #EDEDE8; --ink2: #B8B8B2; --ink3: #96968F;
-      --line: #2C2C2A; --line2: #3A3A37; --accent: #EDEDE8; --on-accent: #121212;
-      --danger: #FF8A7A; --danger-soft: #3A1B17; --sunken: #171717;
+      --canvas: #0f1115; --surface: #171a21; --surface-2: #1c2028; --border: #2a2f3a; --border-2: #222731;
+      --text: #e8eaef; --text-2: #b3b9c5; --text-3: #8a91a0; --primary: #5b7fff; --primary-soft: #26304f;
+      --danger: #ff6369; --hover: rgba(255, 255, 255, .08);
     }
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; }
   body {
-    display: grid; place-items: center; padding: 32px;
-    background: var(--bg); color: var(--ink);
-    font-family: 'Microsoft YaHei UI', 'Microsoft YaHei', 'PingFang SC', sans-serif; font-size: 15px; line-height: 1.6;
+    display: flex; flex-direction: column; background: var(--canvas); color: var(--text);
+    font: 13px/1.6 "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Segoe UI", system-ui, sans-serif;
     -webkit-font-smoothing: antialiased; user-select: none;
   }
-  .box { width: min(560px, 100%); display: flex; flex-direction: column; align-items: center; gap: 18px; text-align: center; }
-  .mark { width: 96px; height: 96px; display: block; }
-  h1 { margin: 0; font-size: 24px; font-weight: 800; }
-  .stage { display: flex; align-items: center; gap: 10px; color: var(--ink2); min-height: 26px; }
-  .spinner { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid var(--line2); border-top-color: var(--accent); animation: spin .8s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .error { display: none; width: 100%; flex-direction: column; gap: 12px; text-align: left; }
-  .error h2 { margin: 0; font-size: 18px; font-weight: 800; color: var(--danger); text-align: center; }
+  .bar { height: 52px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 10px 0 18px; font-size: 14px; font-weight: 700; }
+  .mac .bar { padding-left: 84px; }
+  .bar svg { width: 24px; height: 24px; flex: none; }
+  .bar .grow { flex: 1; }
+  .bar button { display: none; width: 40px; height: 32px; border: 0; border-radius: 8px; background: none; color: var(--text-2); cursor: pointer; place-items: center; }
+  .frameless .bar button { display: grid; }
+  .bar button:hover { background: var(--hover); color: var(--text); }
+  .bar button.x:hover { background: var(--danger); color: #fff; }
+  .bar button svg { width: 15px; height: 15px; }
+  .box {
+    margin: auto auto calc(50vh - 120px); width: min(640px, calc(100% - 48px)); padding: 32px 36px; text-align: center;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 1px 2px rgba(16, 24, 40, .05);
+  }
+  .spin { width: 40px; height: 40px; margin: 0 auto 18px; border-radius: 50%; border: 4px solid var(--primary-soft); border-top-color: var(--primary); animation: s .8s linear infinite; }
+  @keyframes s { to { transform: rotate(360deg); } }
+  h2 { margin: 0 0 6px; font-size: 17px; }
+  .stage { margin: 0; color: var(--text-2); }
+  .error { display: none; flex-direction: column; gap: 12px; text-align: left; }
+  .error h2 { color: var(--danger); text-align: center; }
   .error pre {
-    margin: 0; max-height: 46vh; overflow: auto; padding: 14px 16px; border-radius: 12px;
-    background: var(--surface); border: 1px solid var(--line); color: var(--ink2);
-    font-family: ui-monospace, 'Cascadia Mono', Consolas, 'Microsoft YaHei UI', monospace; font-size: 13px;
+    margin: 0; max-height: 46vh; overflow: auto; padding: 12px 14px; border-radius: 10px;
+    background: var(--surface-2); border: 1px solid var(--border-2); color: var(--text-2);
+    font: 12px/1.5 ui-monospace, "Cascadia Mono", Consolas, "Microsoft YaHei UI", monospace;
     white-space: pre-wrap; word-break: break-all; user-select: text;
   }
-  .error p { margin: 0; font-size: 13px; color: var(--ink3); text-align: center; }
-  body.failed .stage { display: none; }
+  .error p { margin: 0; font-size: 12.5px; color: var(--text-3); text-align: center; }
+  body.failed .loading { display: none; }
   body.failed .error { display: flex; }
-  body.failed .mark { filter: grayscale(1); }
 </style>
 </head>
 <body>
+<div class="bar" data-drag>
+  <svg viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="11" fill="#3461ff"/><g fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"><circle cx="12" cy="11.5" r="3"/><circle cx="28" cy="28.5" r="3"/><path d="M15.5 11.5h8a5 5 0 0 1 0 10h-7a5 5 0 0 0 0 10h8"/></g></svg>
+  ZJCSAutoScript
+  <span class="grow"></span>
+  <button type="button" data-win="min" title="最小化"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12h14"/></svg></button>
+  <button type="button" data-win="close" class="x" title="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+</div>
 <main class="box">
-  <img class="mark" src="icon.png" alt="" aria-hidden="true" draggable="false">
-  <h1>ZJCSAutoScript</h1>
-  <div class="stage" role="status"><span class="spinner" aria-hidden="true"></span><span id="stage">正在启动…</span></div>
+  <div class="loading" role="status">
+    <div class="spin" aria-hidden="true"></div>
+    <h2>正在启动…</h2>
+    <p class="stage" id="stage">首次启动可能需要十几秒。</p>
+  </div>
   <section class="error" role="alert">
     <h2 id="error-title"></h2>
     <pre id="error-detail"></pre>
@@ -68,6 +87,33 @@
       document.body.classList.add('failed');
     },
   };
+  // 窗口按钮和拖动：走 main.rs 的 window_action 命令
+  (function () {
+    var T = window.__TAURI_INTERNALS__;
+    if (!T || !T.invoke) return;
+    var win = function (action) { return T.invoke('window_action', { action: action }).catch(function () {}); };
+    var mac = false, dblAt = null;
+    T.invoke('desktop_info').then(function (info) {
+      mac = info.platform === 'macos';
+      document.body.classList.toggle('mac', mac);
+      document.body.classList.toggle('frameless', !!info.frameless);
+    }).catch(function () {});
+    document.querySelectorAll('[data-win]').forEach(function (b) { b.onclick = function () { win(b.dataset.win); }; });
+    var bar = document.querySelector('[data-drag]');
+    // 和 Tauri 自带的拖动区（drag.js）一样：按下时 preventDefault 再开始拖（不然 WebKit 自己选字，窗口拖不动）；
+    // 双击最大化/还原，Mac 上在第二次松开、鼠标没动时才做
+    bar.addEventListener('mousedown', function (e) {
+      if (e.button !== 0 || (e.detail !== 1 && e.detail !== 2) || e.target.closest('button')) return;
+      if (mac && e.detail === 2) { dblAt = [e.clientX, e.clientY]; return; }
+      e.preventDefault();
+      win(e.detail === 2 ? 'max' : 'drag');
+    });
+    bar.addEventListener('mouseup', function (e) {
+      if (!dblAt || e.button !== 0) return;
+      var p = dblAt; dblAt = null;
+      if (e.detail === 2 && e.clientX === p[0] && e.clientY === p[1] && !e.target.closest('button')) win('max');
+    });
+  })();
 </script>
 </body>
 </html>
