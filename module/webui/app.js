@@ -276,12 +276,13 @@
   ];
   const SHORT = { SignIn: '签到', Mibao: '秘宝能量', Fate: '命运探索', Season: '晶芒淬炼', Party: '惊魂派对', Mall: '商城免费项', Pass: '巡礼之证', Friend: '友情币', Gift: '馈赠', Task: '日常任务', Commission: '委托提交' };
   const ROUTE = [
+    ['公会', ['GuildIdleReward', 'GuildDonate', 'GuildWar', 'GuildRaid']],
     ['商店', ['GeneralShop', 'Vault']],
     ['日常领取', ['CandyTree', 'Cart', 'HomeHouse']],
-    ['笔记', ['DailyDungeon', 'BondAdventure', 'FateFruit', 'Arena', 'MaterialRealm']],
+    ['笔记', ['BondAdventure', 'FateFruit', 'Arena', 'MaterialRealm']],
     ['每日活动', ['HolyBeastTrial', 'TwinShadow']],
-    ['公会', ['GuildIdleReward', 'GuildDonate', 'GuildWar', 'GuildRaid']],
     ['限时活动', ['FenekPuzzle']],
+    ['日常副本', ['DailyDungeon']],
     ['领取奖励', ['DailyReward']],
   ];
   const SETTINGS = ['Scheduler', 'Notify', 'Device'];

@@ -9,26 +9,28 @@ from module.exception import RequestHumanTakeover
 from module.logger import ROOT, logger
 from module.runtime import write_json, write_text
 
-# 日常任务的执行顺序，和需求清单顺序一致
+# 日常任务的执行顺序：基本按需求清单，11-13 用户要求公会提到最前、日常副本挪到领取奖励之前
 TASK_ORDER = [
     'UiTest',
+    # 公会排在最前面（用户 11-13）
+    'GuildIdleReward',
+    'GuildDonate',
+    'GuildWar',
+    'GuildRaid',
     'GeneralShop',
     'Vault',
     'CandyTree',
     'Cart',
     'HomeHouse',
-    'DailyDungeon',
     'BondAdventure',
     'FateFruit',
     'Arena',
     'MaterialRealm',
     'HolyBeastTrial',
     'TwinShadow',
-    'GuildIdleReward',
-    'GuildDonate',
-    'GuildWar',
-    'GuildRaid',
     'FenekPuzzle',
+    # 日常副本最慢（每天 40 分钟～1 小时 40 分钟），排在其他任务后面、领取奖励之前（用户 11-13）
+    'DailyDungeon',
     'DailyReward',
 ]
 
