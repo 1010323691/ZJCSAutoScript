@@ -71,7 +71,6 @@ DailyDungeon:
   _name: 日常副本
   _menu: 笔记
   Enable: {type: checkbox, value: false, name: 启用}
-  Dungeon: {type: select, value: 最新, option: [最新, 磐岩斗阵, 曙光圣庭], name: 打哪个副本, help: 最新 = 进去时默认在中间的副本}
   BuyExtra: {type: checkbox, value: true, name: 购买额外次数, help: 每天限购 2 次，共 250 晨星（100 + 150），买满后每天打 4 次}
 
 BondAdventure:

@@ -8,7 +8,6 @@ from module.note.assets import *
 from module.ui.assets import BACK_ARROW
 from module.ui.page import page_dungeon, page_dungeon_detail, page_home
 
-DUNGEON_CARDS = {'最新': DUNGEON_CARD_2, '磐岩斗阵': DUNGEON_CARD_1, '曙光圣庭': DUNGEON_CARD_2}
 # 从高到低试，第一个没有「解锁条件未达成」的就是能打的最高难度
 DIFFICULTY_TABS = [('炼狱', DUNGEON_TAB_HELL), ('噩梦', DUNGEON_TAB_NIGHTMARE),
                    ('困难', DUNGEON_TAB_HARD), ('普通', DUNGEON_TAB_NORMAL)]
@@ -33,10 +32,25 @@ class DailyDungeon(MatchActivity):
                 return name
         return None
 
+    def latest_card(self):
+        """
+        最新解锁的副本。副本列表从上到下按章节逐个解锁，很长，进来时停在最底部，屏幕上是最后 3 张：
+        最后一章还没解锁时，最下面那张盖着「解锁条件」倒计时，最新的是它上面那张（中间）；
+        最后一章也解锁了，最新的就是最下面那张（11-27 实测）。不按名字选，副本名没有意义（用户 11-27）
+        """
+        self.device.screenshot()
+        if self.appear(DUNGEON_CARD_3_LOCKED, offset=(20, 20)):
+            logger.info('第 3 个副本还没解锁，最新的是中间那个')
+            return DUNGEON_CARD_2
+        logger.info('第 3 个副本已解锁，最新的是最下面那个')
+        return DUNGEON_CARD_3
+
     def enter_detail(self):
-        """进配置的副本，选能打的最高难度"""
+        """进最新解锁的副本，选能打的最高难度"""
         self.ui_ensure(page_dungeon)
-        card = DUNGEON_CARDS.get(self.config.DailyDungeon_Dungeon, DUNGEON_CARD_2)
+        # 列表有入场动画，等卡片停稳再判断第 3 张锁没锁
+        time.sleep(1)
+        card = self.latest_card()
         if not self.ui_click(card, check_button=PAGE_DUNGEON_DETAIL, offset=(10, 10), timeout=10):
             return False
         if not self.select_highest_difficulty():

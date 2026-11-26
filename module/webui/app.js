@@ -251,11 +251,6 @@
 
   // ---------- 规则、文案 ----------
   const DISCOUNTS = [3, 4, 5, 6, 7, 8, 9, '全部'];
-  const DUNGEONS = [
-    ['最新', '进去时默认显示的那个'],
-    ['磐岩斗阵', '固定打这个副本'],
-    ['曙光圣庭', '固定打这个副本'],
-  ];
   const TOOLS = ['锤子', '镐子', '手套', '铲子'];
   const ARENA_PRICES = [10, 15, 20];
   const DONATE = [['第 1 次', '免费', 0], ['第 2 次', '20 晨星', 20], ['第 3 次', '50 晨星', 50]];
@@ -360,9 +355,8 @@
     },
     DailyDungeon: {
       sentence() {
-        const dg = get('DailyDungeon', 'Dungeon');
         const buy = get('DailyDungeon', 'BuyExtra');
-        return (dg === '最新' ? '打最新的副本' : '打「' + dg + '」') + '，选能打的最高难度；' + (buy ? '买满次数，每天 4 场' : '不买次数，每天 2 场') + '；S 评级才领奖';
+        return '打最新解锁的副本，选能打的最高难度；' + (buy ? '买满次数，每天 4 场' : '不买次数，每天 2 场') + '；S 评级才领奖';
       },
       cost: () => (get('DailyDungeon', 'BuyExtra') ? '250 晨星' : null),
       panel: dungeonPanel,
@@ -589,15 +583,12 @@
 
   function dungeonPanel() {
     return [
-      field('打哪个副本？',
-        h('div', { class: 'choices' }, DUNGEONS.map(([name, desc]) =>
-          choice(() => get('DailyDungeon', 'Dungeon') === name, () => set('DailyDungeon', 'Dungeon', name), name, desc)))),
       field('每天买额外的领奖次数吗？',
         switchRow(() => get('DailyDungeon', 'BuyExtra'), () => set('DailyDungeon', 'BuyExtra', !get('DailyDungeon', 'BuyExtra')),
           () => (get('DailyDungeon', 'BuyExtra') ? '买满 2 次，每天打 4 场' : '不买，每天打 2 场'),
           h('span', { class: 'cost-note' }, icon('diamond', 11), '买 2 次共 250 晨星（第 1 次 100，第 2 次 150）')),
         h('p', { class: 'hint' }, '今天已经买过就不会重复买：价格对不上会取消。')),
-      rules('选能打的最高难度。', 'S 评级才领奖；不是 S 就不领、重新匹配，一直打到领奖次数用完。'),
+      rules('打最新解锁的副本（列表最下面那个；最后一章还没解锁时是它上面那个），选能打的最高难度。', 'S 评级才领奖；不是 S 就不领、重新匹配，一直打到领奖次数用完。'),
     ];
   }
 
