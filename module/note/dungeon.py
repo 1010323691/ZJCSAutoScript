@@ -39,16 +39,17 @@ class DailyDungeon(MatchActivity):
         最后一章也解锁了，最新的就是最下面那张（11-27 实测）。不按名字选，副本名没有意义（用户 11-27）
         """
         self.device.screenshot()
-        if self.appear(DUNGEON_CARD_3_LOCKED, offset=(20, 20)):
-            logger.info('第 3 个副本还没解锁，最新的是中间那个')
+        # 进来时离真正的底部还有约 30px 能滑（11-27 实测），纵向偏移放宽到 40，两种位置都认得出
+        if self.appear(DUNGEON_CARD_3_LOCKED, offset=(20, 40)):
+            logger.info('最后一章还没解锁，最新的是中间那个副本')
             return DUNGEON_CARD_2
-        logger.info('第 3 个副本已解锁，最新的是最下面那个')
+        logger.info('最后一章已解锁，最新的是最下面那个副本')
         return DUNGEON_CARD_3
 
     def enter_detail(self):
         """进最新解锁的副本，选能打的最高难度"""
         self.ui_ensure(page_dungeon)
-        # 列表有入场动画，等卡片停稳再判断第 3 张锁没锁
+        # 列表有入场动画，等卡片停稳再判断最下面那张锁没锁
         time.sleep(1)
         card = self.latest_card()
         if not self.ui_click(card, check_button=PAGE_DUNGEON_DETAIL, offset=(10, 10), timeout=10):
@@ -173,7 +174,7 @@ class DailyDungeon(MatchActivity):
 
     def run(self):
         """
-        进指定副本 → 选能打的最高难度 → 买 2 次领奖次数（可选）→ 匹配战斗：
+        进最新解锁的副本 → 选能打的最高难度 → 买 2 次领奖次数（可选）→ 匹配战斗：
         S 评级才领奖，不是 S 不领、重新匹配，不限场数，直到「今日领奖次数已耗尽」（用户 11-02：一直刷 S 直到次数用完）
         """
         logger.hr('Daily dungeon', level=2)
