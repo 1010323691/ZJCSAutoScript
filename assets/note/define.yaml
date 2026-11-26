@@ -46,10 +46,13 @@ NOTE_DUNGEON:           # 笔记页「日常副本」卡片
 PAGE_DUNGEON:           # 副本列表页标题旁的「每日领奖次数」
   screen: dungeon
   area: [190, 40, 300, 60]
-DUNGEON_CARD_1:         # 列表第 1 个副本（磐岩斗阵）
-  click: [60, 160, 660, 420]
-DUNGEON_CARD_2:         # 列表第 2 个副本（曙光圣庭，目前最新解锁，进去默认在中间）
+DUNGEON_CARD_2:         # 进列表时屏幕上的第 2 张（中间）。列表从上到下很长，进来停在最底部
   click: [60, 500, 660, 780]
+DUNGEON_CARD_3:         # 进列表时屏幕上的第 3 张（列表最底下那张）
+  click: [60, 850, 660, 1130]
+DUNGEON_CARD_3_LOCKED:  # 最底下那张（最后一章）没解锁时盖着的菱形「解锁条件 / 倒计时 / 锁」，认上面的「解锁条件」4 个字
+  screen: dungeon_list_locked
+  area: [316, 942, 404, 970]
 PAGE_DUNGEON_DETAIL:    # 副本详情页图片左下「评级区间」
   screen: dungeon_card
   area: [40, 719, 106, 742]
