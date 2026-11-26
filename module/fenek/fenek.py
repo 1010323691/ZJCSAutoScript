@@ -1,7 +1,10 @@
 """
 精彩活动 · 菲涅克的谜题（限时活动，11-05 实测）。
 
-18 关按顺序解锁：音符晶灯 1~6、元素链接 1~6、石板谜题 1~6。关卡列表里当前能打的那关图标右上有红点「!」，
+活动每期换玩法，每期 18 关按顺序解锁，三种小游戏各 6 关：
+- 第一期（11-04）：音符晶灯、元素链接、石板谜题（本文件里的三个 Solver）。
+- 第二期（11-27）：推箱子（sokoban.py）、能量回路（circuit.py）、石碑谜题（stele.py，和石板谜题不是一个玩法）。
+进关后按画面认玩法（detect_game），哪一期的都能打。关卡列表里当前能打的那关图标右上有红点「!」，
 打完的关奖励打勾、可以重玩。每关解开后弹「解谜成功」，点「继续下一关」直接进下一关。
 
 不用道具：场景右侧的菲涅克石像 / 右上角的狐狸头像是「供奉黄金甲虫帮我解谜」，绝不点（用户 11-05：不可以使用道具直接破关）。
@@ -20,6 +23,9 @@ from module.base.timer import Timer
 from module.base.utils import area_offset
 from module.exception import GamePageUnknownError, GameStuckError, GameTooManyClickError, TaskNotImplemented
 from module.fenek.assets import *
+from module.fenek.circuit import CircuitSolver
+from module.fenek.sokoban import SokobanSolver
+from module.fenek.stele import SteleSolver
 from module.logger import logger
 from module.reward.assets import EVENT_CHECK, EVENT_ENTRY
 from module.reward.reward import LIST_REGION as EVENT_LIST_REGION, DailyReward
@@ -1237,8 +1243,13 @@ class FenekPuzzle(DailyReward):
                 continue
             if self.appear(PUZZLE_SUCCESS, offset=(10, 10)):
                 return 'success'
+            if self.appear(HUILU_CHECK, offset=(10, 30)):
+                return 'huilu'
             if self.appear(YUANSU_CHECK, offset=(10, 30)):
                 return 'yuansu'
+            game = self.new_game()
+            if game is not None:
+                return game
             if SHIBAN_SCENE.match_region(self.device.image, (0, 150, 720, 800), similarity=0.75) > 0.75:
                 # 石板谜题场景里也有石像，但石像模板是在灰色石地上截的，草地上只有 0.83 左右，按树林认（0.88 以上，别处 0.35 以下）
                 return 'shiban'
@@ -1251,6 +1262,19 @@ class FenekPuzzle(DailyReward):
             if timer.reached():
                 return None
             time.sleep(0.5)
+
+    def new_game(self):
+        """
+        第二期的推箱子 / 石碑谜题（画面上看得到岩块墙 / 石碑的冠）。石碑谜题和第一期石板谜题是同一片树林，
+        要在认树林之前先认石碑；关卡列表的图标也画着箱子、石碑，先排除列表
+        """
+        if self.appear(FENEK_CHECK, offset=(10, 10)) or self.appear(EVENT_CHECK, offset=(10, 10)):
+            return None
+        if SHIBEI_CROWN.match_region(self.device.image, (0, 130, 720, 1000), similarity=0.85) > 0.85:
+            return 'shibei'
+        if SOKO_WALL.match_region(self.device.image, (0, 0, 720, 1000), similarity=0.85) > 0.85:
+            return 'soko'
+        return None
 
     def panned_shiban(self):
         """拖过画面的石板谜题：看不到树林了，但左下有「<」、草地上有一片石板"""
@@ -1284,6 +1308,21 @@ class FenekPuzzle(DailyReward):
             return YuansuSolver(self).run()
         if game == 'shiban':
             return ShibanSolver(self).run()
+        if game == 'huilu':
+            return CircuitSolver(self).run()
+        if game == 'shibei':
+            return SteleSolver(self).run()
+        if game == 'soko':
+            if SokobanSolver(self).run():
+                return True
+            # 推错一步可能就推不回来了（箱子进了死角）：退出关卡（本关清零）、从列表重进再推一遍
+            logger.warning('推箱子没推完，退出重进再来一次')
+            self.leave_level()
+            if self.goto_list() != 'list' or not self.enter_current_level():
+                return False
+            if self.detect_game() != 'soko':
+                return False
+            return SokobanSolver(self).run()
         raise TaskNotImplemented('菲涅克的谜题：认不出这一关的玩法')
 
     def leave_level(self, timeout=120):
@@ -1345,6 +1384,7 @@ class FenekPuzzle(DailyReward):
             if self.ui_page_appear(page_home):
                 return 'home'
             if self.appear(PUZZLE_SUCCESS, offset=(10, 10)) or self.appear(YUANSU_CHECK, offset=(10, 30)) \
+                    or self.appear(HUILU_CHECK, offset=(10, 30)) or self.new_game() is not None \
                     or YINFU_STATUE.match_region(self.device.image, (480, 430, 720, 780), similarity=0.85) > 0.85 \
                     or SHIBAN_SCENE.match_region(self.device.image, (0, 150, 720, 800), similarity=0.75) > 0.75 \
                     or self.panned_shiban():
