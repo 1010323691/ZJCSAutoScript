@@ -56,11 +56,12 @@ class LoginHandler(UI):
 
     def resumed_activity(self):
         """
-        重启后游戏会直接回到上次没退出的活动关卡（11-05 菲涅克的谜题：重启后停在石板谜题的场景里，
+        重启后游戏会直接回到上次没退出的活动关卡（11-05 菲涅克的谜题：重启后停在石板谜题的场景里；11-27 第二期加了推箱子、能量回路、石碑谜题，
         一直等不到家园，180 秒后停机）。认出关卡、「解谜成功」页、关卡列表、活动汇总，就往外退到家园。
         """
-        from module.fenek.assets import (FENEK_CHECK, LEAVE_CONFIRM, LEAVE_CONFIRM_OK, PUZZLE_EXIT, PUZZLE_EXIT_ONLY,
-                                         PUZZLE_SUCCESS, SHIBAN_SCENE, YINFU_STATUE, YUANSU_CHECK)
+        from module.fenek.assets import (FENEK_CHECK, HUILU_CHECK, LEAVE_CONFIRM, LEAVE_CONFIRM_OK, PUZZLE_EXIT,
+                                         PUZZLE_EXIT_ONLY, PUZZLE_SUCCESS, SHIBAN_SCENE, SHIBEI_CROWN, SOKO_WALL,
+                                         YINFU_STATUE, YUANSU_CHECK)
         from module.reward.assets import EVENT_CHECK
         if self.appear(PUZZLE_SUCCESS, offset=(10, 10), interval=3):
             # 最后一关的成功页只有居中的「退出」
@@ -70,7 +71,9 @@ class LoginHandler(UI):
             self.device.click(LEAVE_CONFIRM_OK)
             return True
         if self.appear(FENEK_CHECK, offset=(10, 10)) or self.appear(EVENT_CHECK, offset=(10, 10)) \
-                or self.appear(YUANSU_CHECK, offset=(10, 30)) \
+                or self.appear(YUANSU_CHECK, offset=(10, 30)) or self.appear(HUILU_CHECK, offset=(10, 30)) \
+                or SHIBEI_CROWN.match_region(self.device.image, (0, 130, 720, 1000), similarity=0.85) > 0.85 \
+                or SOKO_WALL.match_region(self.device.image, (0, 0, 720, 1000), similarity=0.85) > 0.85 \
                 or YINFU_STATUE.match_region(self.device.image, (480, 430, 720, 780), similarity=0.85) > 0.85 \
                 or SHIBAN_SCENE.match_region(self.device.image, (0, 150, 720, 800), similarity=0.75) > 0.75:
             if self.appear_interval_ready(BACK_ARROW, interval=3):
