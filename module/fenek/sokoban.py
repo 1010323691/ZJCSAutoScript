@@ -11,7 +11,6 @@ import time
 from collections import deque
 
 import cv2
-import numpy as np
 
 from module.base.timer import Timer
 from module.fenek.assets import SOKO_BOX, SOKO_BOX_ON, SOKO_TARGET, SOKO_WALL, YINFU_CHEST, PUZZLE_SUCCESS
@@ -70,11 +69,10 @@ class SokobanSolver:
         walls = peaks(img, SOKO_WALL.template, 0.8)
         if len(walls) < 6:
             return None
-        # 墙的相位（用最多的那个）
+        # 墙的相位：以分数最高的那块墙为准（取中位数时，相位跨 0/102 边界会落到中间，筛不出墙）
         xs = [x + WALL_TO_CENTER[0] for x, _, _ in walls]
         ys = [y + WALL_TO_CENTER[1] for _, y, _ in walls]
-        px = int(np.median([x % GRID for x in xs]))
-        py = int(np.median([y % GRID for y in ys]))
+        px, py = xs[0] % GRID, ys[0] % GRID  # peaks 按分数从高到低返回
         x0 = min(x for x in xs if abs((x - px + 51) % GRID - 51) < 15)
         y0 = min(y for y in ys if abs((y - py + 51) % GRID - 51) < 15)
         # 高阈值只用来定相位；目标旁边的墙会被「X」的光照亮，分数掉到 0.6（11-27 推箱子 2），逐格按 0.5 判（地面最高 0.31）
@@ -245,6 +243,9 @@ class SokobanSolver:
             # 箱子在目标上会盖住「X」（发光和不发光的箱子模板分不开），按第一次认到的目标位置判断推完了没有
             logger.info('箱子都在目标上了')
             return True
+        if self.known_targets:
+            # 同一次进关的重试：推上目标的箱子盖住了「X」，按第一次认到的目标求解
+            targets = set(self.known_targets)
         if len(boxes) != len(targets) or not boxes:
             logger.warning('箱子和目标数量对不上')
             return False
